@@ -672,7 +672,7 @@ textarea.inp{resize:vertical;min-height:55px}
 // ══════════════════════════════════════════════════════
 // ═══ FIREBASE CONFIG ── Collez votre databaseURL ici ══
 // ══════════════════════════════════════════════════════
-const FIREBASE_DB_URL = "VOTRE_DATABASE_URL_ICI"; // ← CHANGER CETTE LIGNE
+const FIREBASE_DB_URL = "https://kyper-ilek-default-rtdb.europe-west1.firebasedatabase.app"; // ← CHANGER CETTE LIGNE
 // Exemple : "https://kyper-ilek-default-rtdb.europe-west1.firebasedatabase.app"
 
 let _fbdb = null;
@@ -2713,7 +2713,7 @@ document.addEventListener("DOMContentLoaded",()=>{
   const fbMsg=document.getElementById("fb-msg");
   const fbErr=document.getElementById("fb-error");
 
-  if(!FIREBASE_DB_URL||FIREBASE_DB_URL==="VOTRE_DATABASE_URL_ICI"){
+  if(false){
     fbMsg.textContent="⚠️ Firebase non configuré — mode local (données non partagées)";
     fbErr.style.display="block";
     fbErr.innerHTML=`<b>Configuration requise :</b><br><br>

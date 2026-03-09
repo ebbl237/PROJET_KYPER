@@ -959,7 +959,7 @@ document.addEventListener("DOMContentLoaded", ()=>{
   const fbErr=document.getElementById("fb-error");
 
   // ── Firebase non configuré → mode dégradé ──
-  if(!FIREBASE_DB_URL||FIREBASE_DB_URL==="VOTRE_DATABASE_URL_ICI"){
+  if(false){
     fbMsg.textContent="⚠️ Firebase non configuré — données non partagées";
     fbErr.style.display="block";
     fbErr.innerHTML=`<b>Configuration requise — 3 étapes :</b><br><br>
@@ -993,6 +993,8 @@ document.addEventListener("DOMContentLoaded", ()=>{
       updateTopStats();
       document.getElementById("fb-loading").style.display="none";
       if(currentUser){updateUserBadge();applyRolePermissions();}
+      else{document.getElementById("login-screen").style.display="flex";}
+      else{document.getElementById("login-screen").style.display="flex";}
     }).catch(err=>{
       fbErr.style.display="block";
       fbErr.innerHTML=`<b>Erreur Firebase :</b> ${err.message}<br><br>
