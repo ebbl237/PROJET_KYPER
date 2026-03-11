@@ -659,6 +659,7 @@ body.day-mode .msg-thread-header:hover{background:#EEF0F8}
         </div>
         <div style="display:flex;gap:10px;margin-top:4px">
           <button onclick="enregistrerEval()" style="flex:1;background:linear-gradient(135deg,var(--fid3),var(--fid2));color:#fff;border:none;border-radius:8px;padding:10px;font-weight:700;font-size:12px;cursor:pointer;font-family:'Syne',sans-serif;letter-spacing:.5px">💾 ENREGISTRER</button>
+      <button style="background:linear-gradient(135deg,#FFD740,#FF9800);color:#0A0D14;border:none;border-radius:7px;padding:8px 16px;font-weight:800;font-size:12px;cursor:pointer" onclick="ouvrirPointCloture()">📌 POINT DE CLÔTURE</button>
           <button onclick="clearForm()" style="background:transparent;border:1px solid var(--bd2);color:var(--m);border-radius:8px;padding:10px 16px;cursor:pointer;font-size:12px">✕</button>
         </div>
         <div class="form-ok" id="form-ok">✅ Évaluation enregistrée avec succès !</div>
@@ -718,7 +719,7 @@ function arrToObj(arr){const o={};(arr||[]).forEach(item=>{if(item&&item.id!==un
 function objToArr(obj){return obj?Object.values(obj).filter(x=>x!=null):[];}
 
 // ══════════ AUTH ══════════
-const USERS_DB={
+let USERS_DB={
   "RQF":{password:"RQF@KYPER",role:"RQF",display:"Responsable Qualité"},
   "BASILE":{password:"BASILE@KYPER",role:"RQF",display:"BASILE — Responsable Qualité"},
   "EUNICE_FELIX":{password:"EUNICE@KYPER",role:"CTRL",display:"EUNICE FELIX — Évaluateur"},
@@ -728,6 +729,7 @@ const USERS_DB={
   "STEPHANIE":{password:"STEPHANIE@KYPER",role:"CTRL",display:"STEPHANIE — Évaluateur"},
   "CHRISTELLE":{password:"CHRISTELLE@KYPER",role:"CTRL",display:"CHRISTELLE — Évaluateur"},
   "GREGOIRE_FABRICE":{password:"GREGOIRE@KYPER",role:"SUP",display:"GREGOIRE FABRICE — Superviseur"},
+  "LORRAINE":{password:"LORRAINE@KYPER",role:"CTRL",display:"LORRAINE — Évaluateur"},
   "VISITEUR":{password:"VISIT@KYPER",role:"VISIT",display:"Visiteur"},
   "CDP":{password:"CDP@KYPER",role:"CDP",display:"Chef de Projet"},
   "FORMATEUR":{password:"FORM@KYPER",role:"FORM",display:"Formateur"}
@@ -751,7 +753,7 @@ function doLogin(){
   const err=document.getElementById("login-err");
   const user=USERS_DB[u];
   if(!user||user.password!==p){err.classList.add("on");document.getElementById("l-pass").value="";setTimeout(()=>err.classList.remove("on"),3000);return;}
-  currentUser={username:u,role:user.role,display:user.display};
+  currentUser={username:u,role:user.role,display:user.display,tabs:user.tabs||null};
   sessionStorage.setItem("kyper_fidelis",JSON.stringify(currentUser));
   accessLog.push({user:u,role:user.role,timestamp:new Date().toISOString(),ua:navigator.userAgent});saveAccessLog();
   // Log accès
@@ -908,7 +910,13 @@ function initFidelisFirebase(){
       // Users — sync temps réel des comptes
       _fbdb.ref('/kyper/fidelis/users').on('value',snap=>{
         const d=snap.val();
-        if(d){USERS_DB={...USERS_DB,...d};}
+        if(d){
+          Object.assign(USERS_DB,d);
+          try{localStorage.setItem('fidelis_users_v1',JSON.stringify(USERS_DB));}catch(e){}
+          // Rafraîchir la vue comptes si active
+          const ctrl=document.querySelector('#ctrl-content');
+          if(ctrl&&ctrl.innerHTML&&ctrl.innerHTML.includes('fc-user'))renderCtComptes();
+        }
       });
       document.getElementById("fb-loading").style.display="none";
       if(currentUser){document.getElementById("login-screen").style.display="none";updateUserBadge();applyRolePermissions();renderDash();}
@@ -952,7 +960,11 @@ function logAudit(type,ev,extra={}){
   saveAuditLog();
 }
 function canDelete(){return currentUser&&currentUser.role==="RQF";}
-function saveUsersDB(){FB.set("/users",JSON.parse(JSON.stringify(USERS_DB)));if(!_fbReady)localStorage.setItem("fidelis_users_v1",JSON.stringify(USERS_DB));}
+function saveUsersDB(){
+  const toSave=JSON.parse(JSON.stringify(USERS_DB));
+  FB.set("/users",toSave);
+  try{localStorage.setItem("fidelis_users_v1",JSON.stringify(toSave));}catch(e){}
+}
 function fmt(v){return v==null?"—":(v*100).toFixed(0)+"%";}
 function badge(txt,cls){return `<span class="badge ${cls}">${txt}</span>`;}
 function niv(v){
@@ -3305,6 +3317,153 @@ function _deleteAllCtrlMsgs(){
   MESSAGES=[];
   saveMessages();
   _buildCtrlMsgUI();
+}
+
+// ══════════════════════════════════════════════════════════════
+// POINT DE CLÔTURE — Modal + Export image (copier/télécharger)
+// ══════════════════════════════════════════════════════════════
+function ouvrirPointCloture(evalId){
+  // Chercher l'éval si ID fourni, sinon prendre le formulaire en cours
+  let ev=null;
+  if(evalId!=null && typeof evals!=='undefined')ev=evals.find(e=>e.id===evalId)||evals.find(e=>String(e.id)===String(evalId));
+  
+  const val=(k,fb)=>ev?ev[k]||fb:fb;
+  const agent=val('agent','—');
+  const evaluateur=val('evaluateur',val('eval_','—'));
+  const projet=val('projet','—');
+  const conf=val('conf',val('conformite','—'));
+  const dateEv=val('date',new Date().toISOString().slice(0,10));
+  const dateStr=dateEv?new Date(dateEv+'T12:00').toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'}):'—';
+  const score=val('total',val('score',null));
+  const appreciation=val('appreciation','—');
+  const sup=val('sup',val('superviseur','—'));
+  const scoreBadge=score!=null?`<div style="text-align:center;margin:14px 0">
+    <div style="font-size:42px;font-weight:900;color:${score>=80?'#00E676':score>=60?'#FFD740':'#FF5252'}">${score}<span style="font-size:18px">/100</span></div>
+    <div style="font-size:12px;color:#8891AA;margin-top:2px">${appreciation}</div>
+  </div>`:'';
+
+  // Supprimer modal précédent
+  const old=document.getElementById('modal-pc');if(old)old.remove();
+  const modal=document.createElement('div');
+  modal.id='modal-pc';
+  modal.style.cssText='position:fixed;inset:0;background:#000a;z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+
+  modal.innerHTML=`
+  <div style="background:#0A0D14;border-radius:18px;width:100%;max-width:480px;overflow:hidden;box-shadow:0 30px 80px #000a">
+    <!-- Carte exportable -->
+    <div id="pc-card" style="background:linear-gradient(145deg,#0D1117,#161B27);padding:28px 30px">
+      <!-- Header -->
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px">
+        <div style="width:42px;height:42px;background:linear-gradient(135deg,#FFD740,#FF9800);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">📌</div>
+        <div style="flex:1">
+          <div style="font-size:15px;font-weight:900;color:#FFD740;letter-spacing:.8px">POINT DE CLÔTURE</div>
+          <div style="font-size:9px;color:#555E78;letter-spacing:.5px;margin-top:2px">KYPER · Qualité by KYPER</div>
+        </div>
+        <div style="font-size:10px;color:#555E78">${new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'})}</div>
+      </div>
+      <!-- Score -->
+      ${scoreBadge}
+      <!-- Infos grille -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+        <div style="background:#ffffff08;border-radius:8px;padding:10px 12px;border-left:3px solid #FFD740">
+          <div style="font-size:8px;color:#8891AA;font-weight:700;letter-spacing:1.2px;margin-bottom:4px">AGENT</div>
+          <div style="font-size:13px;color:#EEF0F5;font-weight:700">${agent}</div>
+        </div>
+        <div style="background:#ffffff08;border-radius:8px;padding:10px 12px;border-left:3px solid #00BFA5">
+          <div style="font-size:8px;color:#8891AA;font-weight:700;letter-spacing:1.2px;margin-bottom:4px">PROJET</div>
+          <div style="font-size:13px;color:#EEF0F5;font-weight:700">${projet}</div>
+        </div>
+        <div style="background:#ffffff08;border-radius:8px;padding:10px 12px;border-left:3px solid #40C4FF">
+          <div style="font-size:8px;color:#8891AA;font-weight:700;letter-spacing:1.2px;margin-bottom:4px">ÉVALUATEUR</div>
+          <div style="font-size:13px;color:#EEF0F5;font-weight:700">${evaluateur}</div>
+        </div>
+        <div style="background:#ffffff08;border-radius:8px;padding:10px 12px;border-left:3px solid #B478C8">
+          <div style="font-size:8px;color:#8891AA;font-weight:700;letter-spacing:1.2px;margin-bottom:4px">DATE</div>
+          <div style="font-size:13px;color:#EEF0F5;font-weight:700">${dateStr}</div>
+        </div>
+        ${sup&&sup!=='—'?`<div style="background:#ffffff08;border-radius:8px;padding:10px 12px;border-left:3px solid #FF9800">
+          <div style="font-size:8px;color:#8891AA;font-weight:700;letter-spacing:1.2px;margin-bottom:4px">SUPERVISEUR</div>
+          <div style="font-size:13px;color:#EEF0F5;font-weight:700">${sup}</div>
+        </div>`:''}
+        ${conf&&conf!=='—'?`<div style="background:#ffffff08;border-radius:8px;padding:10px 12px;border-left:3px solid #00E676">
+          <div style="font-size:8px;color:#8891AA;font-weight:700;letter-spacing:1.2px;margin-bottom:4px">CONFORMITÉ</div>
+          <div style="font-size:13px;color:#${conf==='Conforme'?'00E676':'FF5252'};font-weight:700">${conf}</div>
+        </div>`:''}
+      </div>
+      <!-- Footer carte -->
+      <div style="border-top:1px solid #ffffff12;padding-top:10px;display:flex;justify-content:space-between;align-items:center;margin-top:10px">
+        <div style="font-size:9px;color:#555E78">KYPER by Exceliam</div>
+        <div style="font-size:9px;color:#555E78">${currentUser?.display||''}</div>
+      </div>
+    </div>
+    <!-- Boutons -->
+    <div style="padding:14px 20px;background:#0D1117;display:flex;gap:8px;flex-wrap:wrap">
+      <button id="pc-copy-btn" onclick="exportPointCloture('copier')" 
+        style="flex:1;background:linear-gradient(135deg,#FFD740,#FF9800);color:#0A0D14;border:none;border-radius:9px;padding:11px;font-weight:800;font-size:12px;cursor:pointer;letter-spacing:.3px">
+        📋 COPIER L'IMAGE
+      </button>
+      <button onclick="exportPointCloture('telecharger')" 
+        style="background:#ffffff12;color:#CDD5E0;border:1px solid #ffffff20;border-radius:9px;padding:11px 16px;font-size:12px;cursor:pointer;font-weight:700">
+        ⬇️ Télécharger
+      </button>
+      <button onclick="document.getElementById('modal-pc').remove()" 
+        style="background:transparent;border:1px solid #383C52;color:#555E78;border-radius:9px;padding:11px 14px;font-size:12px;cursor:pointer">
+        ✕
+      </button>
+    </div>
+  </div>`;
+  
+  document.body.appendChild(modal);
+  modal.addEventListener('click',e=>{if(e.target===modal)modal.remove();});
+}
+
+async function exportPointCloture(mode){
+  const card=document.getElementById('pc-card');
+  const btn=document.getElementById('pc-copy-btn');
+  if(!card)return;
+  try{
+    if(!window.html2canvas){
+      const orig=btn?btn.textContent:'';
+      if(btn){btn.textContent='⏳ Chargement...';btn.disabled=true;}
+      await new Promise((res,rej)=>{
+        const s=document.createElement('script');
+        s.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+        s.onload=res;s.onerror=rej;
+        document.head.appendChild(s);
+      });
+      if(btn){btn.textContent=orig;btn.disabled=false;}
+    }
+    if(btn){btn.textContent='⏳ Génération...';btn.disabled=true;}
+    const canvas=await html2canvas(card,{backgroundColor:'#0D1117',scale:2.5,useCORS:true,logging:false});
+    
+    canvas.toBlob(async blob=>{
+      if(mode==='copier'){
+        try{
+          await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);
+          if(btn){btn.textContent='✅ IMAGE COPIÉE !';btn.style.background='#00E676';btn.disabled=false;}
+          setTimeout(()=>{if(btn&&document.getElementById('modal-pc')){btn.textContent='📋 COPIER L\'IMAGE';btn.style.background='';}},3000);
+        }catch(e){
+          // Fallback téléchargement
+          _downloadPCBlob(blob);
+          if(btn){btn.textContent='✅ TÉLÉCHARGÉE';btn.disabled=false;}
+        }
+      }else{
+        _downloadPCBlob(blob);
+        if(btn){btn.textContent='✅ TÉLÉCHARGÉ';btn.disabled=false;setTimeout(()=>{if(btn)btn.textContent='📋 COPIER L\'IMAGE';},2000);}
+      }
+    },'image/png');
+  }catch(e){
+    if(btn){btn.textContent='⚠️ Erreur';btn.disabled=false;}
+    alert('Erreur génération image : '+e.message);
+  }
+}
+
+function _downloadPCBlob(blob){
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  const ts=new Date().toLocaleDateString('fr-FR').replace(/\//g,'-');
+  a.href=url;a.download=`point-cloture-kyper-${ts}.png`;a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),3000);
 }
 </script>
 
