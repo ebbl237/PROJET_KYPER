@@ -948,7 +948,7 @@ function renderCtAcces(){
   document.getElementById("ctrl-content").innerHTML=`<div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
       <div class="stitle" style="color:var(--gold)">◆ LOGS D'ACCÈS — ${logs.length} connexion(s)</div>
-      ${canDelete()?`<button onclick="if(confirm('Vider les logs d\'accès ?\')){FB.set('/shared/access',{});accessLog=[];renderCtAcces();}" style="background:transparent;border:1px solid var(--r);color:var(--r);border-radius:5px;padding:4px 12px;cursor:pointer;font-size:11px">🗑 Vider</button>`:""}
+      ${canDelete()?`<button onclick="if(confirm('Vider les logs d\'accès ?\')){FB.set('/shared/access',null);accessLog=[];renderCtAcces();}" style="background:transparent;border:1px solid var(--r);color:var(--r);border-radius:5px;padding:4px 12px;cursor:pointer;font-size:11px">🗑 Vider</button>`:""}
     </div>
     ${logs.length===0?`<div style="text-align:center;color:var(--m);padding:28px">Aucune connexion</div>`:`<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>#</th><th>Utilisateur</th><th>Rôle</th><th>App</th><th>Date / Heure</th></tr></thead><tbody>
     ${logs.slice(0,200).map((l,i)=>`<tr class="${i%2===0?"odd":"even"}"><td style="color:var(--m);font-size:10px">${logs.length-i}</td><td style="font-weight:700">${l.user||"—"}</td><td><span style="color:${rc[l.role]||"var(--m)"};font-weight:600">${rl[l.role]||l.role||"—"}</span></td><td>${badge(l.app||"Qualité","bt")}</td><td style="color:var(--m);font-size:11px">${l.timestamp?new Date(l.timestamp).toLocaleString("fr-FR"):"—"}</td></tr>`).join("")}

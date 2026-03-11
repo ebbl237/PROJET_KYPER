@@ -1883,8 +1883,11 @@ function renderCtAcces(){
 }
 function clearAccessLog(){
   if(!canDelete())return;
-  if(!confirm("Vider l'intégralité des logs d'accès ?\nCette action est irréversible."))return;
-  accessLog=[];saveAccessLog();renderCtAcces();
+  if(!confirm("Supprimer définitivement tous les logs d'accès ?\nCette action est irréversible et permanente."))return;
+  accessLog=[];
+  // Suppression définitive Firebase (null = supprime le nœud)
+  FB.set('/shared/access', null);
+  renderCtAcces();
 }
 function renderCtComptes(){
   if(!canDelete()){document.getElementById("ctrl-content").innerHTML=`<div class="card"><div style="text-align:center;color:var(--r);padding:28px">⛔ Accès réservé au Responsable Qualité Formation</div></div>`;return;}
@@ -2638,10 +2641,7 @@ function renderAgentList(search){
         +"<td style='padding:7px;text-align:center;color:var(--fid);font-weight:700'>"+n+"</td>"
         +"<td style='padding:7px;text-align:center;font-weight:700;color:"+(sc>0?sColor:"var(--m)")+"'>"+(sc>0?sc+"%":"—")+"</td>"
         +"<td style='padding:7px;text-align:center'><span style='font-size:10px;font-weight:600;color:"+(inact?"var(--r)":"var(--g)")+"'>"+(inact?"⛔ Inactif":"✅ Actif")+"</span></td>"
-        +"<td style='padding:7px;text-align:center;white-space:nowrap'>"
-        +"<button onclick='editAgent("+i+")' style='background:transparent;border:1px solid var(--b);color:var(--b);border-radius:4px;padding:2px 8px;cursor:pointer;font-size:11px;margin-right:4px'>✏️</button>"
-        +(n===0?"<button onclick='deleteAgent("+i+")' style='background:transparent;border:1px solid var(--r);color:var(--r);border-radius:4px;padding:2px 8px;cursor:pointer;font-size:11px'>✕</button>":"")
-        +"</td></tr>";
+        +"<td style='padding:7px;text-align:center;white-space:nowrap'>"+(['RQF','CTRL'].includes(currentUser?.role)?"<button onclick='editAgent("+i+")' style='background:transparent;border:1px solid var(--b);color:var(--b);border-radius:4px;padding:2px 8px;cursor:pointer;font-size:11px;margin-right:4px'>✏️ Modifier</button>":"")+(currentUser?.role==='RQF'?"<button onclick='deleteAgentForce("+i+","+n+")' style='background:transparent;border:1px solid var(--r);color:var(--r);border-radius:4px;padding:2px 8px;cursor:pointer;font-size:11px'>🗑</button>":"")+"</td></tr>";
     }).join("")
     +"</tbody></table>";
   document.getElementById("agents-list-content").innerHTML=html;
@@ -2702,9 +2702,18 @@ function deleteAgent(idx){
   if(!confirm("Supprimer définitivement "+a.nom+" ? (Cet agent n'a aucune évaluation)"))return;
   logAccess("Agents","Agent supprimé: "+a.nom);
   AGENTS_DB.splice(idx,1);
-  saveAgents();
-  rebuildAgentSelects();
-  renderAgentsMgmt();
+  saveAgents();rebuildAgentSelects();renderAgentsMgmt();
+}
+function deleteAgentForce(idx,nbEvals){
+  if(currentUser?.role!=='RQF'){alert("⛔ Réservé au RQF.");return;}
+  const a=AGENTS_DB[idx];
+  const msg=nbEvals>0
+    ?"⚠️ ATTENTION : "+a.nom+" a "+nbEvals+" évaluation(s) enregistrée(s).\nSupprimer cet agent supprimera uniquement son profil (les évaluations restent dans la base).\n\nConfirmer la suppression ?"
+    :"Supprimer définitivement "+a.nom+" ?";
+  if(!confirm(msg))return;
+  logAccess("Agents","Agent supprimé (RQF force): "+a.nom);
+  AGENTS_DB.splice(idx,1);
+  saveAgents();rebuildAgentSelects();renderAgentsMgmt();
 }
 
 function annulerEditAgent(){

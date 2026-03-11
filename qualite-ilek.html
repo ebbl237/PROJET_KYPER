@@ -578,7 +578,7 @@ body.day-mode .msg-list-item.unread{background:#EBF5FF;border-color:#40C4FF}
           <div class="field">
             <label class="lbl">Type de Contrat</label>
             <select class="inp" id="fd-contrat">
-              <option>DUAL</option><option>ELEC</option><option>GAZ</option>
+              <option value="">—</option><option>DUAL</option><option>ELEC</option><option>GAZ</option><option>NA</option>
             </select>
           </div>
           <div class="field">
@@ -2401,8 +2401,11 @@ function renderCtAcces(){
 }
 function clearAccessLog(){
   if(!canDelete())return;
-  if(!confirm("Vider l'intégralité des logs d'accès ?\nCette action est irréversible."))return;
-  accessLog=[];saveAccessLog();renderCtAcces();
+  if(!confirm("Supprimer définitivement tous les logs d'accès ?\nCette action est irréversible et permanente."))return;
+  accessLog=[];
+  // Suppression définitive Firebase (null = supprime le nœud)
+  FB.set('/shared/access', null);
+  renderCtAcces();
 }
 
 // ═══ GESTION DES COMPTES ════════════════════════════════════════════════════
