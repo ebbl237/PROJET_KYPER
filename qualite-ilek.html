@@ -501,9 +501,11 @@ body.day-mode .msg-list-item.unread{background:#EBF5FF;border-color:#40C4FF}
             <label class="lbl">Évaluateur *</label>
             <select class="inp" id="fd-eval">
               <option value="">—</option>
+              <option>RQF</option><option>BASILE</option>
+              <option>JOEL_KOUAME</option><option>GISELE_SORO</option><option>FABRICE_BAILY</option>
               <option>GRETTAH</option><option>CHRISTELLE</option><option>LORRAINE</option>
               <option>FATIM</option><option>EPIPHANIE</option><option>AUDREY</option>
-              <option>INES</option><option>RFQ</option>
+              <option>INES</option><option>VISITEUR</option>
             </select>
           </div>
           <div class="field">
@@ -1323,6 +1325,14 @@ function nouveauFormulaire(){
   updateScoreLive();
   document.getElementById("sv").textContent="—";
   filterAgents();
+  // Pré-sélectionner l'évaluateur connecté
+  if(currentUser){
+    const selEval=document.getElementById("fd-eval");
+    if(selEval){
+      const opt=[...selEval.options].find(o=>o.value===currentUser.username||o.text===currentUser.username);
+      if(opt) selEval.value=opt.value||opt.text;
+    }
+  }
   // Afficher prochain numéro
   const nextNum=evalSeq+1;
   const el=document.getElementById("fd-eval-id");if(el)el.textContent="#"+nextNum;
@@ -3809,6 +3819,14 @@ function populateFormSelects(){
     if(cur) projSel.value=cur;
   }
   filterFormAgents();
+  // Pré-sélectionner l'évaluateur connecté
+  if(currentUser){
+    const selEval=document.getElementById('fd-eval');
+    if(selEval){
+      const opt=[...selEval.options].find(o=>o.value===currentUser.username||o.text===currentUser.username);
+      if(opt) selEval.value=opt.value||opt.text;
+    }
+  }
 }
 
 function filterFormAgents(){

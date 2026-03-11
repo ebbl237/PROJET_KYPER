@@ -593,11 +593,15 @@ body.day-mode .msg-thread-header:hover{background:#EEF0F8}
 <option>MONIQUE A</option>
 <option>ALAIN D</option></select></div>
           <div class="field"><div class="flbl">DATE D'ENREGISTREMENT</div><input type="date" class="inp" id="e-date-enreg"/></div>
-          <div class="field"><div class="flbl">ÉVALUATEUR *</div><select class="inp" id="e-evaluateur"><option value="">—</option><option>LORRAINE</option>
-<option>CHRISTELLE</option>
-<option>EPIPHANIE</option>
-<option>FATIM</option>
-<option>MANAGER PROD</option></select></div>
+          <div class="field"><div class="flbl">ÉVALUATEUR *</div><select class="inp" id="e-evaluateur">
+<option value="">—</option>
+<option>RQF</option><option>BASILE</option>
+<option>EUNICE_FELIX</option><option>BJ3</option><option>MONIQUE</option>
+<option>FELIX</option><option>STEPHANIE</option><option>CHRISTELLE</option>
+<option>GREGOIRE_FABRICE</option><option>LORRAINE</option>
+<option>EPIPHANIE</option><option>FATIM</option>
+<option>CDP</option><option>FORMATEUR</option><option>VISITEUR</option>
+</select></div>
           <div class="field"><div class="flbl">CAMPAGNE</div><select class="inp" id="e-campagne"><option value="">—</option><option>UNICEF</option>
 <option>UNADEV</option>
 <option>LUCIE CARE</option>
@@ -770,9 +774,9 @@ function applyRolePermissions(){
   const isCtrl=role==='CTRL'||role==='SUP';
   const isVisit=role==='VISIT'||role==='CDP'||role==='FORMATEUR';
 
-  // Onglet ÉVALUATION (créer): CTRL, SUP, RQF seulement
+  // Onglet ÉVALUATION : accessible à tous les collaborateurs connectés
   const nbEval=document.getElementById('nb-eval');
-  if(nbEval) nbEval.style.display=isVisit?'none':'';
+  if(nbEval) nbEval.style.display='';
 
   // Onglet BASE DATA: CTRL, SUP, RQF seulement
   const nbData=document.getElementById('nb-data');
@@ -1059,6 +1063,15 @@ function buildGrille(){
         </div>`).join("")}
     </div>`).join("");
   updateScore();
+
+  // Pré-sélectionner l'évaluateur connecté à l'ouverture du formulaire
+  if(currentUser){
+    const sel=document.getElementById("e-evaluateur");
+    if(sel){
+      const opt=[...sel.options].find(o=>o.value===currentUser.username||o.text===currentUser.username);
+      if(opt) sel.value=opt.value||opt.text;
+    }
+  }
 }
 function updateScore(){
   let total=0,maxApplicable=0;
@@ -1132,6 +1145,14 @@ function clearForm(){
   ["e-date","e-date-enreg","e-indice","e-ca","e-comment"].forEach(id=>document.getElementById(id).value="");
   document.querySelectorAll(".grille-radio input").forEach(r=>r.checked=false);
   updateScore();
+  // Pré-sélectionner l'évaluateur connecté
+  if(currentUser){
+    const sel=document.getElementById("e-evaluateur");
+    if(sel){
+      const opt=[...sel.options].find(o=>o.value===currentUser.username||o.text===currentUser.username);
+      if(opt) sel.value=opt.value||opt.text;
+    }
+  }
 }
 
 // ══════════ DASHBOARD ══════════
