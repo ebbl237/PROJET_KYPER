@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>KYPER · Plateforme EXCELIAM</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#090B14;color:#EEF0F5;font-family:'Segoe UI',system-ui,sans-serif;
+     min-height:100vh;display:flex;flex-direction:column;align-items:center;
+     justify-content:center;padding:32px}
+.logo{font-size:52px;font-weight:900;letter-spacing:8px;
+      background:linear-gradient(135deg,#00BFA5 0%,#1DE9B6 50%,#00BFA5 100%);
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px}
+.tagline{color:#3A4460;font-size:11px;letter-spacing:3px;text-transform:uppercase;margin-bottom:52px}
+.grid{display:flex;gap:22px;flex-wrap:wrap;justify-content:center;max-width:900px}
+.card{background:#111827;border:1px solid #1E2A3A;border-radius:18px;padding:32px 36px;
+      text-align:center;text-decoration:none;color:#EEF0F5;transition:all .25s;
+      min-width:230px;cursor:pointer;position:relative;overflow:hidden}
+.card::before{content:'';position:absolute;inset:0;
+              background:linear-gradient(135deg,var(--c)10,transparent);
+              opacity:0;transition:.25s}
+.card:hover{border-color:var(--c);transform:translateY(-5px);
+            box-shadow:0 16px 48px rgba(0,0,0,.6)}
+.card:hover::before{opacity:1}
+.icon{font-size:46px;margin-bottom:18px;
+      filter:drop-shadow(0 0 14px var(--c)55);display:block}
+.app-name{font-size:16px;font-weight:900;letter-spacing:.5px;margin-bottom:6px;
+          color:var(--c)}
+.client-badge{display:inline-block;font-size:9px;font-weight:700;letter-spacing:2px;
+              background:var(--c)18;color:var(--c);border:1px solid var(--c)33;
+              border-radius:20px;padding:3px 12px;margin-bottom:12px;text-transform:uppercase}
+.desc{font-size:11px;color:#3A4A60;line-height:1.8}
+.c1{--c:#00BFA5}
+.c2{--c:#FFD740}
+.c3{--c:#40C4FF}
+.footer{margin-top:56px;color:#1E2A3A;font-size:10px;letter-spacing:2px}
+.sep{display:inline-block;width:4px;height:4px;border-radius:50%;margin:0 10px;
+     vertical-align:middle;opacity:.4}
+</style>
+</head>
+<body>
+<div class="logo">KYPER</div>
+<div class="tagline">Plateforme Qualité &amp; Formation · EXCELIAM</div>
+
+<div class="grid">
+
+  <a class="card c1" href="qualite-ilek.html">
+    <span class="icon">🎯</span>
+    <div class="client-badge">ILEK</div>
+    <div class="app-name">Qualité by KYPER</div>
+    <div class="desc">
+      Formulaire · Synthèse · Analyse<br>
+      Coaching · Débrief · Messagerie<br>
+      Gestion Agents · Contrôleur
+    </div>
+  </a>
+
+  <a class="card c2" href="qualite-fidelis.html">
+    <span class="icon">📊</span>
+    <div class="client-badge">FIDELIS</div>
+    <div class="app-name">Qualité by KYPER</div>
+    <div class="desc">
+      Dashboard KPIs · Évaluations<br>
+      Par Agent · Par Évaluateur<br>
+      Débrief · Contrôle Messages
+    </div>
+  </a>
+
+  <a class="card c3" href="formation.html">
+    <span class="icon">📚</span>
+    <div class="client-badge">EXCELIAM</div>
+    <div class="app-name">Formation by KYPER</div>
+    <div class="desc">
+      Suivi des sessions · Présences<br>
+      Attestations · Statistiques<br>
+      Agents &amp; Formateurs
+    </div>
+  </a>
+
+</div>
+
+<div class="footer">
+  EXCELIAM
+  <span class="sep" style="background:#00BFA5"></span>
+  KYPER Platform
+  <span class="sep" style="background:#00BFA5"></span>
+  2026
+</div>
+</body>
+</html>
