@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KYPER Formations – Suivi & Planification</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f5f6fa;--white:#ffffff;--sidebar:#1a1d27;--card:#ffffff;--border:#e4e7ef;
+  --text:#1a1d27;--muted:#7a808f;--accent:#5b8dee;--accent2:#7c5ce0;
+  --green:#10b981;--orange:#f59e0b;--red:#ef4444;--purple:#8b5cf6;
+  --r:12px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+/* LOGIN */
+#login-screen{
+  position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,#1a1d27 0%,#2d3250 100%);z-index:1000;
+}
+.login-box{background:#fff;border-radius:20px;padding:44px 40px;width:400px;max-width:92vw}
+.login-logo{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;color:var(--sidebar);margin-bottom:4px}
+.login-logo span{color:var(--accent)}
+.login-sub{font-size:13px;color:var(--muted);margin-bottom:30px}
+.login-box label{display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px}
+.login-box input,.login-box select{
+  width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;
+  font-size:14px;font-family:inherit;color:var(--text);margin-bottom:14px;background:#fff;
+}
+.login-box input:focus,.login-box select:focus{outline:none;border-color:var(--accent)}
+.btn-login{
+  width:100%;padding:13px;background:linear-gradient(135deg,var(--accent),var(--accent2));
+  border:none;border-radius:8px;color:#fff;font-size:15px;font-weight:600;
+  cursor:pointer;font-family:inherit;
+}
+.login-err{color:var(--red);font-size:13px;margin-top:10px;display:none}
+
+/* APP */
+#app{display:none;min-height:100vh;flex-direction:row}
+.sidebar{
+  width:250px;min-width:250px;background:var(--sidebar);display:flex;
+  flex-direction:column;min-height:100vh;
+}
+.sidebar-logo{
+  padding:22px 20px 16px;font-family:'Syne',sans-serif;font-size:19px;font-weight:800;
+  color:#fff;border-bottom:1px solid rgba(255,255,255,0.08);
+}
+.sidebar-logo span{color:var(--accent)}
+.sidebar-logo small{display:block;font-size:11px;font-weight:400;color:rgba(255,255,255,0.4);margin-top:2px}
+.sidebar-user{
+  padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.08);
+  display:flex;align-items:center;gap:10px;
+}
+.avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#fff;flex-shrink:0}
+.user-name{font-size:13px;font-weight:600;color:#fff}
+.user-role{font-size:11px;color:rgba(255,255,255,0.4)}
+.nav-section{padding:16px 20px 6px;font-size:10px;font-weight:700;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:1px}
+.nav-item{
+  display:flex;align-items:center;gap:10px;padding:10px 20px;cursor:pointer;
+  font-size:13px;font-weight:500;color:rgba(255,255,255,0.55);
+  border-left:3px solid transparent;transition:all .18s;
+}
+.nav-item:hover{background:rgba(255,255,255,0.05);color:#fff}
+.nav-item.active{background:rgba(91,141,238,0.12);border-left-color:var(--accent);color:var(--accent)}
+.nav-icon{font-size:16px}
+.sidebar-bottom{margin-top:auto;padding:16px 20px;border-top:1px solid rgba(255,255,255,0.08)}
+.btn-logout{width:100%;padding:9px;background:transparent;border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:rgba(255,255,255,0.4);font-size:13px;cursor:pointer;font-family:inherit}
+.btn-logout:hover{border-color:var(--red);color:var(--red)}
+
+/* MAIN */
+.main{flex:1;padding:28px;overflow-y:auto}
+.page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px}
+.page-title{font-family:'Syne',sans-serif;font-size:24px;font-weight:700}
+.page-sub{font-size:13px;color:var(--muted);margin-top:2px}
+.btn-primary{
+  padding:10px 20px;background:linear-gradient(135deg,var(--accent),var(--accent2));
+  border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:600;
+  cursor:pointer;font-family:inherit;white-space:nowrap;
+}
+.btn-secondary{
+  padding:10px 20px;background:#fff;border:1.5px solid var(--border);
+  border-radius:8px;color:var(--text);font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;
+}
+.btn-secondary:hover{border-color:var(--accent);color:var(--accent)}
+.btn-danger{padding:7px 14px;background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--muted);font-size:12px;cursor:pointer;font-family:inherit}
+.btn-danger:hover{border-color:var(--red);color:var(--red)}
+
+/* STATS */
+.stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:24px}
+.stat-card{
+  background:var(--white);border:1px solid var(--border);border-radius:var(--r);
+  padding:16px;
+}
+.stat-val{font-family:'Syne',sans-serif;font-size:26px;font-weight:700}
+.stat-label{font-size:11px;color:var(--muted);margin-top:2px}
+.stat-trend{font-size:11px;margin-top:4px}
+
+/* TABS */
+.tabs{display:flex;gap:4px;background:#fff;border:1px solid var(--border);border-radius:10px;padding:4px;width:fit-content;margin-bottom:20px}
+.tab{padding:8px 18px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;color:var(--muted);transition:all .18s}
+.tab.active{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff}
+
+/* CARD */
+.card{background:var(--white);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:20px}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)}
+.card-title{font-size:14px;font-weight:700}
+.card-body{padding:20px}
+
+/* TABLE */
+table{width:100%;border-collapse:collapse}
+th{padding:11px 14px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;background:#f8f9fc;border-bottom:1px solid var(--border)}
+td{padding:11px 14px;font-size:13px;border-bottom:1px solid var(--border)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#fafbff}
+.chip{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.chip-green{background:#d1fae5;color:#059669}
+.chip-orange{background:#fef3c7;color:#d97706}
+.chip-red{background:#fee2e2;color:#dc2626}
+.chip-gray{background:#f1f5f9;color:#64748b}
+.chip-blue{background:#dbeafe;color:#2563eb}
+.chip-purple{background:#ede9fe;color:#7c3aed}
+
+/* PROGRESS BARS */
+.progress-wrap{width:100%;background:#f1f5f9;border-radius:4px;height:8px}
+.progress-fill{height:100%;border-radius:4px;transition:width .4s}
+
+/* PLAN ANNUEL */
+.plan-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.month-card{
+  background:#fff;border:1px solid var(--border);border-radius:10px;
+  overflow:hidden;
+}
+.month-header{padding:10px 14px;font-size:12px;font-weight:700;background:#f8f9fc;border-bottom:1px solid var(--border)}
+.month-body{padding:10px 14px;min-height:80px}
+.session-pill{
+  display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:6px;
+  font-size:11px;margin-bottom:4px;cursor:pointer;
+}
+.session-pill:hover{opacity:.8}
+.add-session-btn{
+  width:100%;margin-top:6px;padding:5px;background:transparent;
+  border:1.5px dashed var(--border);border-radius:6px;font-size:11px;
+  color:var(--muted);cursor:pointer;font-family:inherit;
+}
+.add-session-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+/* FORM OVERLAY */
+.overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:500;
+  display:none;align-items:center;justify-content:center;
+}
+.overlay.open{display:flex}
+.modal{
+  background:#fff;border-radius:16px;padding:28px;width:500px;max-width:92vw;
+  max-height:90vh;overflow-y:auto;
+}
+.modal-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;margin-bottom:20px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.form-group label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.form-group input,.form-group select,.form-group textarea{
+  padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;
+  font-size:13px;font-family:inherit;color:var(--text);
+}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{outline:none;border-color:var(--accent)}
+.form-group textarea{resize:vertical;min-height:80px}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:8px}
+.agent-check-list{display:grid;grid-template-columns:1fr 1fr;gap:8px;max-height:180px;overflow-y:auto;padding:4px}
+.agent-check-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px}
+.agent-check-item.selected{border-color:var(--accent);background:#f0f5ff}
+.agent-check-item input[type=checkbox]{accent-color:var(--accent)}
+
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">KYPER <span>Formations</span></div>
+    <div class="login-sub">Plateforme de suivi et planification des formations</div>
+    <label>Adresse email</label>
+    <input type="email" id="login-email" placeholder="responsable@exceliam.ci">
+    <label>Mot de passe</label>
+    <input type="password" id="login-pwd" placeholder="••••••••">
+    <label>Rôle</label>
+    <select id="login-role">
+      <option value="responsable">Responsable Formation</option>
+      <option value="formateur">Formateur</option>
+      <option value="agent">Agent / Apprenant</option>
+    </select>
+    <button class="btn-login" onclick="doLogin()">Accéder à la plateforme</button>
+    <a href="index.html" style="display:block;text-align:center;margin-top:12px;font-size:12px;color:#6b7280;text-decoration:none">← Retour à l'accueil KYPER</a>
+    <div class="login-err" id="login-err">Identifiants incorrects.</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-logo">KYPER <span>Formations</span><small>Suivi & Planification</small></div>
+    <div class="sidebar-user">
+      <div class="avatar" id="sb-avatar">R</div>
+      <div><div class="user-name" id="sb-name">Utilisateur</div><div class="user-role" id="sb-role">Responsable</div></div>
+    </div>
+    <div class="nav-section">Navigation</div>
+    <div class="nav-item active" onclick="showView('tableau-bord')"><span class="nav-icon">📊</span> Tableau de bord</div>
+    <div class="nav-item" onclick="showView('plan-annuel')"><span class="nav-icon">📅</span> Plan annuel</div>
+    <div class="nav-item" onclick="showView('plan-mensuel')"><span class="nav-icon">🗓</span> Plan mensuel</div>
+    <div class="nav-item" onclick="showView('sessions')"><span class="nav-icon">🎓</span> Gestion des sessions</div>
+    <div class="nav-item" onclick="showView('agents')"><span class="nav-icon">👤</span> Suivi agents</div>
+    <div class="nav-item" onclick="showView('modules-suivi')"><span class="nav-icon">📚</span> Catalogue formations</div>
+    <div class="sidebar-bottom">
+      <button class="btn-logout" onclick="doLogout()">Se déconnecter</button>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main" id="main-content">
+
+    <!-- TABLEAU DE BORD -->
+    <div id="view-tableau-bord">
+      <div class="page-header">
+        <div><div class="page-title">Tableau de bord</div><div class="page-sub">Vue globale des formations — <span id="current-year">2025</span></div></div>
+        <div style="display:flex;gap:10px">
+          <button class="btn-secondary" onclick="showView('plan-mensuel')">📅 Voir le mois en cours</button>
+          <button class="btn-primary" onclick="openModal('add-session')">+ Nouvelle session</button>
+        </div>
+      </div>
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-val" id="stat-sessions-total" style="color:var(--accent)">0</div>
+          <div class="stat-label">Sessions planifiées</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val" id="stat-sessions-done" style="color:var(--green)">0</div>
+          <div class="stat-label">Sessions réalisées</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val" id="stat-agents-formed" style="color:var(--purple)">0</div>
+          <div class="stat-label">Agents formés</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val" id="stat-completion-rate" style="color:var(--orange)">—</div>
+          <div class="stat-label">Taux de complétion</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val" id="stat-heures" style="color:var(--text)">0h</div>
+          <div class="stat-label">Heures de formation</div>
+        </div>
+      </div>
+      <!-- Prochaines sessions -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Prochaines sessions</div>
+          <button class="btn-secondary" onclick="showView('sessions')">Voir toutes les sessions →</button>
+        </div>
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr><th>Formation</th><th>Projet</th><th>Date</th><th>Formateur</th><th>Participants</th><th>Statut</th></tr></thead>
+            <tbody id="upcoming-table"></tbody>
+          </table>
+        </div>
+      </div>
+      <!-- Taux complétion par formation -->
+      <div class="card">
+        <div class="card-header"><div class="card-title">Complétion par formation</div></div>
+        <div class="card-body" id="completion-bars"></div>
+      </div>
+    </div>
+
+    <!-- PLAN ANNUEL -->
+    <div id="view-plan-annuel" class="hidden">
+      <div class="page-header">
+        <div><div class="page-title">Plan de formation annuel</div><div class="page-sub">Vue calendaire de toutes les sessions <span id="plan-year">2025</span></div></div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <button class="btn-secondary" onclick="changeYear(-1)">← Année précédente</button>
+          <span id="year-label" style="font-weight:700;font-size:15px">2025</span>
+          <button class="btn-secondary" onclick="changeYear(1)">Année suivante →</button>
+          <button class="btn-primary" onclick="openModal('add-session')">+ Ajouter</button>
+        </div>
+      </div>
+      <div class="plan-grid" id="annual-plan-grid"></div>
+    </div>
+
+    <!-- PLAN MENSUEL -->
+    <div id="view-plan-mensuel" class="hidden">
+      <div class="page-header">
+        <div><div class="page-title" id="monthly-title">Plan mensuel</div><div class="page-sub">Sessions et participants du mois</div></div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <button class="btn-secondary" onclick="changeMonth(-1)">← Mois précédent</button>
+          <button class="btn-secondary" onclick="changeMonth(1)">Mois suivant →</button>
+          <button class="btn-primary" onclick="openModal('add-session')">+ Ajouter session</button>
+        </div>
+      </div>
+      <div id="monthly-sessions-list"></div>
+    </div>
+
+    <!-- SESSIONS -->
+    <div id="view-sessions" class="hidden">
+      <div class="page-header">
+        <div><div class="page-title">Gestion des sessions</div><div class="page-sub">Toutes les sessions de formation</div></div>
+        <button class="btn-primary" onclick="openModal('add-session')">+ Nouvelle session</button>
+      </div>
+      <div class="tabs">
+        <div class="tab active" onclick="filterSessions('all',this)">Toutes</div>
+        <div class="tab" onclick="filterSessions('planifié',this)">Planifiées</div>
+        <div class="tab" onclick="filterSessions('réalisé',this)">Réalisées</div>
+        <div class="tab" onclick="filterSessions('annulé',this)">Annulées</div>
+      </div>
+      <div class="card">
+        <table>
+          <thead><tr><th>Formation</th><th>Projet</th><th>Date</th><th>Durée</th><th>Formateur</th><th>Participants</th><th>Présences</th><th>Statut</th><th></th></tr></thead>
+          <tbody id="sessions-table"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- AGENTS -->
+    <div id="view-agents" class="hidden">
+      <div class="page-header">
+        <div><div class="page-title">Suivi par agent</div><div class="page-sub">Complétion des formations par agent</div></div>
+        <div style="display:flex;gap:10px">
+          <select id="agent-filter-project" style="padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:13px" onchange="renderAgentView()">
+            <option value="all">Tous les projets</option>
+            <option value="ILEK">ILEK</option>
+            <option value="FIDELIS">FIDELIS</option>
+            <option value="TMCI">TMCI</option>
+          </select>
+          <button class="btn-primary" onclick="openModal('add-agent')">+ Ajouter agent</button>
+        </div>
+      </div>
+      <div id="agent-cards-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px"></div>
+    </div>
+
+    <!-- MODULES / CATALOGUE -->
+    <div id="view-modules-suivi" class="hidden">
+      <div class="page-header">
+        <div><div class="page-title">Catalogue des formations</div><div class="page-sub">Programmes et modules disponibles</div></div>
+        <button class="btn-primary" onclick="openModal('add-formation')">+ Nouvelle formation</button>
+      </div>
+      <div id="formations-list"></div>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<!-- ══ MODALS ══ -->
+<!-- Add Session -->
+<div class="overlay" id="modal-add-session">
+  <div class="modal">
+    <div class="modal-title">Planifier une session de formation</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Intitulé de la formation</label>
+        <select id="s-formation">
+          <option>Fondamentaux Centre d'Appel</option>
+          <option>Télévente ILEK — Grille qualité</option>
+          <option>Fundraising FIDELIS — Grille qualité</option>
+          <option>Service Client TMCI — Grille qualité</option>
+          <option>Techniques de vente avancées</option>
+          <option>Gestion des objections</option>
+          <option>RGPD & Conformité</option>
+          <option>Maîtrise des outils CRM</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Projet concerné</label>
+        <select id="s-projet">
+          <option value="Transversal">Transversal</option>
+          <option value="ILEK">ILEK</option>
+          <option value="FIDELIS">FIDELIS</option>
+          <option value="TMCI">TMCI</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Date de la session</label>
+        <input type="date" id="s-date">
+      </div>
+      <div class="form-group">
+        <label>Durée (heures)</label>
+        <input type="number" id="s-duree" value="2" min="0.5" step="0.5">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Formateur</label>
+        <input type="text" id="s-formateur" placeholder="Nom du formateur">
+      </div>
+      <div class="form-group">
+        <label>Type</label>
+        <select id="s-type">
+          <option>Présentiel</option>
+          <option>Distanciel</option>
+          <option>Hybride</option>
+          <option>E-learning</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Participants prévus</label>
+      <div class="agent-check-list" id="participants-list"></div>
+    </div>
+    <div class="form-group">
+      <label>Objectifs pédagogiques</label>
+      <textarea id="s-objectifs" placeholder="Décrivez les objectifs de cette session…"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal('add-session')">Annuler</button>
+      <button class="btn-primary" onclick="saveSession()">Enregistrer la session</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Agent -->
+<div class="overlay" id="modal-add-agent">
+  <div class="modal">
+    <div class="modal-title">Ajouter un agent</div>
+    <div class="form-row">
+      <div class="form-group"><label>Prénom</label><input type="text" id="a-prenom" placeholder="Prénom"></div>
+      <div class="form-group"><label>Nom</label><input type="text" id="a-nom" placeholder="Nom"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Projet</label>
+        <select id="a-projet">
+          <option>ILEK</option><option>FIDELIS</option><option>TMCI</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Statut</label>
+        <select id="a-statut">
+          <option>Agent actif</option><option>En formation</option><option>En immersion</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Date d'intégration</label>
+      <input type="date" id="a-date">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal('add-agent')">Annuler</button>
+      <button class="btn-primary" onclick="saveAgent()">Ajouter l'agent</button>
+    </div>
+  </div>
+</div>
+
+<!-- Présences -->
+<div class="overlay" id="modal-presences">
+  <div class="modal">
+    <div class="modal-title">Gestion des présences</div>
+    <div id="presences-session-info" style="margin-bottom:16px;font-size:13px;color:var(--muted)"></div>
+    <div id="presences-list"></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal('presences')">Fermer</button>
+      <button class="btn-primary" onclick="savePresences()">Enregistrer les présences</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Formation -->
+<div class="overlay" id="modal-add-formation">
+  <div class="modal">
+    <div class="modal-title">Ajouter une formation au catalogue</div>
+    <div class="form-group"><label>Intitulé</label><input type="text" id="f-title" placeholder="Nom de la formation"></div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Catégorie</label>
+        <select id="f-cat">
+          <option>Qualité</option><option>Technique de vente</option><option>Produit</option><option>Conformité</option><option>Managérial</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Durée (h)</label><input type="number" id="f-duree" value="4" min="1"></div>
+    </div>
+    <div class="form-group">
+      <label>Modules inclus (séparés par virgule)</label>
+      <input type="text" id="f-modules" placeholder="Module 1, Module 2, Module 3">
+    </div>
+    <div class="form-group"><label>Description</label><textarea id="f-desc" placeholder="Objectifs et contenu…"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal('add-formation')">Annuler</button>
+      <button class="btn-primary" onclick="saveFormation()">Ajouter</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getDatabase, ref, set, get, push, remove, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+// ══ CONFIG FIREBASE — remplacer par vos clés ══
+const firebaseConfig = {
+  apiKey: "VOTRE_API_KEY",
+  authDomain: "VOTRE_PROJECT.firebaseapp.com",
+  databaseURL: "https://VOTRE_PROJECT-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "VOTRE_PROJECT",
+  storageBucket: "VOTRE_PROJECT.appspot.com",
+  messagingSenderId: "XXXXXXX",
+  appId: "XXXXXXX"
+};
+
+const fb = initializeApp(firebaseConfig);
+const db = getDatabase(fb);
+const auth = getAuth(fb);
+
+// ══ STATE ══
+let currentUser = null, sessions = {}, agents = {}, formations = {}, presenceSession = null;
+let currentYear = new Date().getFullYear(), currentMonth = new Date().getMonth();
+const MONTHS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+const PROJET_COLORS = { ILEK:'blue', FIDELIS:'purple', TMCI:'green', Transversal:'gray' };
+
+const PROJ_CHIP = { ILEK:'chip-blue', FIDELIS:'chip-purple', TMCI:'chip-green', Transversal:'chip-gray' };
+const STATUS_CHIP = { planifié:'chip-orange', réalisé:'chip-green', annulé:'chip-red' };
+
+// ══ DEFAULT DATA ══
+const DEFAULT_FORMATIONS = [
+  { title:'Fondamentaux Centre d\'Appel', cat:'Qualité', duree:4, modules:'Communication téléphonique,RGPD & Conformité,Gestion CRM,Gestion appels difficiles', desc:'Formation de base pour tout nouveau conseiller.' },
+  { title:'Télévente ILEK — Grille qualité', cat:'Qualité', duree:6, modules:'Accueil & Authentification,Découverte client,Proposition commerciale,Traitement objections,Verrouillage & Closing', desc:'Maîtrise des 19 critères de la grille qualité ILEK.' },
+  { title:'Fundraising FIDELIS — Grille qualité', cat:'Qualité', duree:6, modules:'Accroche & RGPD,Argumentation,Appel au don,Traitement objections,PEL/DEL & Blindage', desc:'Méthodologie complète de collecte de dons FIDELIS.' },
+  { title:'Service Client TMCI — Grille qualité', cat:'Qualité', duree:5, modules:'Phase accueil,Identification besoins,Traitement demande,Qualités relationnelles,Outils CRM', desc:'Les 7 phases évaluées sur la grille TMCI Total Énergie.' },
+  { title:'Techniques de vente avancées', cat:'Technique de vente', duree:8, modules:'Psychologie acheteur,Argumentation avancée,Négociation', desc:'Perfectionnement pour agents expérimentés.' },
+  { title:'RGPD & Conformité', cat:'Conformité', duree:3, modules:'Principes RGPD,BLOCTEL,Obligations légales', desc:'Formation obligatoire conformité.' },
+];
+
+// ══ AUTH ══
+window.doLogin = async () => {
+  const email = document.getElementById('login-email').value;
+  const pwd = document.getElementById('login-pwd').value;
+  const role = document.getElementById('login-role').value;
+  try {
+    const cred = await signInWithEmailAndPassword(auth, email, pwd);
+    await set(ref(db,`users_form/${cred.user.uid}/role`), role);
+    initApp(cred.user, email, role);
+  } catch(e) {
+    document.getElementById('login-err').style.display = 'block';
+  }
+};
+
+window.doLogout = () => signOut(auth).then(() => {
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+});
+
+onAuthStateChanged(auth, async user => {
+  if (user) {
+    const snap = await get(ref(db,`users_form/${user.uid}/role`));
+    initApp(user, user.email, snap.val() || 'responsable');
+  }
+});
+
+async function initApp(user, email, role) {
+  currentUser = user;
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  document.getElementById('current-year').textContent = currentYear;
+  document.getElementById('plan-year').textContent = currentYear;
+  document.getElementById('year-label').textContent = currentYear;
+
+  const name = email.split('@')[0].replace(/\./g,' ');
+  document.getElementById('sb-avatar').textContent = name[0].toUpperCase();
+  document.getElementById('sb-name').textContent = name;
+  document.getElementById('sb-role').textContent = role === 'responsable' ? 'Responsable Formation' : role === 'formateur' ? 'Formateur' : 'Agent';
+
+  // Init default formations if empty
+  const fSnap = await get(ref(db,'formations_cat'));
+  if (!fSnap.exists()) {
+    for (const f of DEFAULT_FORMATIONS) await push(ref(db,'formations_cat'), f);
+  }
+
+  // Listen to data
+  onValue(ref(db,'sessions_form'), snap => { sessions = snap.val() || {}; refreshAll(); });
+  onValue(ref(db,'agents_form'), snap => { agents = snap.val() || {}; refreshParticipantsList(); });
+  onValue(ref(db,'formations_cat'), snap => { formations = snap.val() || {}; renderFormations(); });
+}
+
+function refreshAll() {
+  updateStats();
+  renderUpcoming();
+  renderCompletionBars();
+  renderAnnualPlan();
+  renderMonthlySessions();
+  renderSessionsTable();
+  renderAgentView();
+}
+
+// ══ STATS ══
+function updateStats() {
+  const allSessions = Object.values(sessions);
+  const done = allSessions.filter(s=>s.statut==='réalisé');
+  const agentSet = new Set();
+  done.forEach(s => (s.presences||[]).filter(p=>p.present).forEach(p=>agentSet.add(p.nom)));
+  const totalH = allSessions.reduce((a,s)=>a+(parseFloat(s.duree)||0),0);
+  const completion = allSessions.length ? Math.round(done.length/allSessions.length*100) : 0;
+
+  document.getElementById('stat-sessions-total').textContent = allSessions.length;
+  document.getElementById('stat-sessions-done').textContent = done.length;
+  document.getElementById('stat-agents-formed').textContent = agentSet.size;
+  document.getElementById('stat-completion-rate').textContent = completion + '%';
+  document.getElementById('stat-heures').textContent = totalH + 'h';
+}
+
+// ══ UPCOMING TABLE ══
+function renderUpcoming() {
+  const upcoming = Object.entries(sessions)
+    .map(([id,s])=>({id,...s}))
+    .filter(s=>s.statut!=='annulé')
+    .sort((a,b)=>new Date(a.date)-new Date(b.date))
+    .slice(0,6);
+  document.getElementById('upcoming-table').innerHTML = upcoming.map(s => `
+    <tr>
+      <td style="font-weight:600">${s.formation||'—'}</td>
+      <td><span class="chip ${PROJ_CHIP[s.projet]||'chip-gray'}">${s.projet||'—'}</span></td>
+      <td>${s.date ? new Date(s.date).toLocaleDateString('fr-FR') : '—'}</td>
+      <td>${s.formateur||'—'}</td>
+      <td>${(s.participants||[]).length} agents</td>
+      <td><span class="chip ${STATUS_CHIP[s.statut]||'chip-gray'}">${s.statut||'planifié'}</span></td>
+    </tr>`).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px">Aucune session planifiée</td></tr>';
+}
+
+// ══ COMPLETION BARS ══
+function renderCompletionBars() {
+  const formTitles = [...new Set(Object.values(sessions).map(s=>s.formation))].filter(Boolean);
+  if (!formTitles.length) { document.getElementById('completion-bars').innerHTML = '<div style="color:var(--muted);font-size:13px">Aucune donnée disponible.</div>'; return; }
+  document.getElementById('completion-bars').innerHTML = formTitles.map(title => {
+    const related = Object.values(sessions).filter(s=>s.formation===title);
+    const done = related.filter(s=>s.statut==='réalisé').length;
+    const pct = related.length ? Math.round(done/related.length*100) : 0;
+    const color = pct>=80?'var(--green)':pct>=40?'var(--orange)':'var(--red)';
+    return `<div style="margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:13px">
+        <span style="font-weight:500">${title}</span>
+        <span style="color:${color};font-weight:700">${pct}%</span>
+      </div>
+      <div class="progress-wrap"><div class="progress-fill" style="width:${pct}%;background:${color}"></div></div>
+    </div>`;
+  }).join('');
+}
+
+// ══ ANNUAL PLAN ══
+window.changeYear = (d) => { currentYear += d; document.getElementById('year-label').textContent = currentYear; renderAnnualPlan(); };
+
+function renderAnnualPlan() {
+  const grid = document.getElementById('annual-plan-grid');
+  if (!grid) return;
+  grid.innerHTML = MONTHS.map((m, mi) => {
+    const monthSessions = Object.entries(sessions)
+      .map(([id,s])=>({id,...s}))
+      .filter(s => {
+        if (!s.date) return false;
+        const d = new Date(s.date);
+        return d.getFullYear()===currentYear && d.getMonth()===mi;
+      });
+    return `<div class="month-card">
+      <div class="month-header">${m} ${currentYear}</div>
+      <div class="month-body">
+        ${monthSessions.map(s=>`
+          <div class="session-pill" style="background:var(--bg);border:1px solid var(--border)" onclick="openPresencesModal('${s.id}')">
+            <span style="font-size:9px">●</span>
+            <span style="flex:1">${(s.formation||'Session').substring(0,22)}</span>
+          </div>`).join('')}
+        <button class="add-session-btn" onclick="preselectMonth(${mi});openModal('add-session')">+ Ajouter</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ══ MONTHLY ══
+window.changeMonth = (d) => {
+  currentMonth += d;
+  if (currentMonth < 0) { currentMonth = 11; currentYear--; }
+  if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+  renderMonthlySessions();
+};
+
+function renderMonthlySessions() {
+  const title = document.getElementById('monthly-title');
+  if (title) title.textContent = `${MONTHS[currentMonth]} ${currentYear}`;
+  const monthSessions = Object.entries(sessions)
+    .map(([id,s])=>({id,...s}))
+    .filter(s => {
+      if (!s.date) return false;
+      const d = new Date(s.date);
+      return d.getFullYear()===currentYear && d.getMonth()===currentMonth;
+    }).sort((a,b)=>new Date(a.date)-new Date(b.date));
+
+  const container = document.getElementById('monthly-sessions-list');
+  if (!container) return;
+  if (!monthSessions.length) {
+    container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);background:#fff;border:1px solid var(--border);border-radius:12px">Aucune session planifiée ce mois-ci.</div>';
+    return;
+  }
+  container.innerHTML = monthSessions.map(s => {
+    const presTotal = (s.participants||[]).length;
+    const presOk = (s.presences||[]).filter(p=>p.present).length;
+    return `<div class="card" style="margin-bottom:14px">
+      <div class="card-header">
+        <div>
+          <div style="font-weight:700;font-size:15px">${s.formation}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">📅 ${new Date(s.date).toLocaleDateString('fr-FR')} · ⏱ ${s.duree}h · 👤 ${s.formateur||'—'} · 🖥 ${s.type||'Présentiel'}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="chip ${PROJ_CHIP[s.projet]||'chip-gray'}">${s.projet}</span>
+          <span class="chip ${STATUS_CHIP[s.statut]||'chip-orange'}">${s.statut||'planifié'}</span>
+          <button class="btn-secondary" onclick="openPresencesModal('${s.id}')">Présences</button>
+          <button class="btn-danger" onclick="deleteSession('${s.id}')">Supprimer</button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div style="display:flex;gap:20px;font-size:13px">
+          <span>👥 ${presTotal} participants prévus</span>
+          <span style="color:${presTotal?'var(--green)':'var(--muted)'}">✓ ${presOk} présents</span>
+          ${s.objectifs ? `<span style="color:var(--muted)">🎯 ${s.objectifs.substring(0,60)}…</span>` : ''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ══ SESSIONS TABLE ══
+let sessionFilter = 'all';
+window.filterSessions = (f, el) => {
+  sessionFilter = f;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  renderSessionsTable();
+};
+
+function renderSessionsTable() {
+  const tbody = document.getElementById('sessions-table');
+  if (!tbody) return;
+  let list = Object.entries(sessions).map(([id,s])=>({id,...s}));
+  if (sessionFilter !== 'all') list = list.filter(s=>s.statut===sessionFilter);
+  list.sort((a,b)=>new Date(b.date)-new Date(a.date));
+  tbody.innerHTML = list.map(s => {
+    const presOk = (s.presences||[]).filter(p=>p.present).length;
+    const presTotal = (s.participants||[]).length;
+    return `<tr>
+      <td style="font-weight:600">${s.formation}</td>
+      <td><span class="chip ${PROJ_CHIP[s.projet]||'chip-gray'}">${s.projet}</span></td>
+      <td>${s.date ? new Date(s.date).toLocaleDateString('fr-FR') : '—'}</td>
+      <td>${s.duree}h</td>
+      <td>${s.formateur||'—'}</td>
+      <td>${presTotal}</td>
+      <td><span style="color:${presOk===presTotal&&presTotal>0?'var(--green)':'var(--orange)'}">${presOk}/${presTotal}</span></td>
+      <td><span class="chip ${STATUS_CHIP[s.statut]||'chip-orange'}">${s.statut||'planifié'}</span></td>
+      <td style="display:flex;gap:6px">
+        <button class="btn-secondary" style="padding:5px 10px;font-size:11px" onclick="openPresencesModal('${s.id}')">Présences</button>
+        <button class="btn-danger" onclick="markDone('${s.id}')">✓ Réalisée</button>
+      </td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:20px">Aucune session</td></tr>';
+}
+
+// ══ AGENTS ══
+window.renderAgentView = () => {
+  const project = document.getElementById('agent-filter-project')?.value || 'all';
+  const grid = document.getElementById('agent-cards-grid');
+  if (!grid) return;
+  let agentList = Object.entries(agents).map(([id,a])=>({id,...a}));
+  if (project !== 'all') agentList = agentList.filter(a=>a.projet===project);
+
+  grid.innerHTML = agentList.map(a => {
+    const agentSessions = Object.values(sessions).filter(s =>
+      (s.participants||[]).includes(a.id) || (s.participants||[]).some(p=>p===a.id)
+    );
+    const attended = Object.values(sessions).filter(s =>
+      (s.presences||[]).some(p=>p.nom===`${a.prenom} ${a.nom}` && p.present)
+    ).length;
+    const total = Object.values(sessions).filter(s=>
+      (s.participants||[]).some(p=>p===`${a.prenom} ${a.nom}`)
+    ).length;
+    const pct = total ? Math.round(attended/total*100) : 0;
+    return `<div class="card">
+      <div class="card-body">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+          <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;flex-shrink:0">
+            ${(a.prenom||'?')[0].toUpperCase()}
+          </div>
+          <div>
+            <div style="font-weight:700;font-size:14px">${a.prenom} ${a.nom}</div>
+            <div style="font-size:11px;color:var(--muted)">${a.projet} · ${a.statut}</div>
+          </div>
+        </div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Taux de présence</div>
+        <div class="progress-wrap" style="margin-bottom:6px">
+          <div class="progress-fill" style="width:${pct}%;background:${pct>=80?'var(--green)':pct>=50?'var(--orange)':'var(--red)'}"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:12px">
+          <span>${attended} sessions suivies</span>
+          <span style="font-weight:700;color:${pct>=80?'var(--green)':pct>=50?'var(--orange)':'var(--red)'}">${pct}%</span>
+        </div>
+      </div>
+    </div>`;
+  }).join('') || '<div style="grid-column:1/-1;text-align:center;color:var(--muted);padding:30px">Aucun agent enregistré pour ce projet.</div>';
+};
+
+// ══ FORMATIONS CATALOGUE ══
+function renderFormations() {
+  const container = document.getElementById('formations-list');
+  if (!container) return;
+  container.innerHTML = Object.entries(formations).map(([id,f]) => `
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-header">
+        <div>
+          <div style="font-weight:700;font-size:15px">${f.title}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">📚 ${f.cat} · ⏱ ${f.duree}h</div>
+        </div>
+        <button class="btn-danger" onclick="deleteFormation('${id}')">Supprimer</button>
+      </div>
+      <div class="card-body">
+        <div style="font-size:13px;color:var(--muted);margin-bottom:10px">${f.desc||''}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          ${(f.modules||'').split(',').map(m=>`<span class="chip chip-blue">${m.trim()}</span>`).join('')}
+        </div>
+      </div>
+    </div>`).join('') || '<div style="text-align:center;color:var(--muted);padding:30px;background:#fff;border:1px solid var(--border);border-radius:12px">Aucune formation dans le catalogue.</div>';
+}
+
+// ══ PARTICIPANTS ══
+function refreshParticipantsList() {
+  const list = document.getElementById('participants-list');
+  if (!list) return;
+  const agentList = Object.entries(agents).map(([id,a])=>({id,...a}));
+  list.innerHTML = agentList.map(a => `
+    <div class="agent-check-item" id="pcheck-${a.id}" onclick="toggleParticipant(this,'${a.prenom} ${a.nom}')">
+      <input type="checkbox" id="pc-${a.id}"> ${a.prenom} ${a.nom}
+      <span class="chip ${PROJ_CHIP[a.projet]||'chip-gray'}" style="margin-left:auto;font-size:10px">${a.projet}</span>
+    </div>`).join('') || '<div style="color:var(--muted);font-size:13px;padding:8px">Aucun agent enregistré. Ajoutez d\'abord des agents.</div>';
+}
+
+window.toggleParticipant = (el, name) => {
+  el.classList.toggle('selected');
+  el.querySelector('input').checked = el.classList.contains('selected');
+};
+
+// ══ PRESENCES ══
+window.openPresencesModal = (sessionId) => {
+  presenceSession = sessionId;
+  const s = sessions[sessionId];
+  if (!s) return;
+  document.getElementById('presences-session-info').innerHTML =
+    `<strong>${s.formation}</strong> · ${s.date ? new Date(s.date).toLocaleDateString('fr-FR') : ''} · ${s.formateur}`;
+  const participants = s.participants || [];
+  const existingPresences = s.presences || [];
+  document.getElementById('presences-list').innerHTML = participants.map(name => {
+    const existing = existingPresences.find(p=>p.nom===name);
+    const present = existing ? existing.present : false;
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:13px;font-weight:500">${name}</span>
+      <div style="display:flex;gap:8px">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+          <input type="radio" name="pres-${name.replace(/ /g,'_')}" value="1" ${present?'checked':''}>
+          <span style="color:var(--green)">✓ Présent</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+          <input type="radio" name="pres-${name.replace(/ /g,'_')}" value="0" ${!present?'checked':''}>
+          <span style="color:var(--red)">✗ Absent</span>
+        </label>
+      </div>
+    </div>`;
+  }).join('') || '<div style="color:var(--muted);text-align:center;padding:16px">Aucun participant enregistré.</div>';
+  openModal('presences');
+};
+
+window.savePresences = async () => {
+  const s = sessions[presenceSession];
+  if (!s) return;
+  const presences = (s.participants||[]).map(name => {
+    const radio = document.querySelector(`input[name="pres-${name.replace(/ /g,'_')}"]:checked`);
+    return { nom: name, present: radio ? radio.value === '1' : false };
+  });
+  await set(ref(db,`sessions_form/${presenceSession}/presences`), presences);
+  await set(ref(db,`sessions_form/${presenceSession}/statut`), 'réalisé');
+  closeModal('presences');
+};
+
+// ══ CRUD ══
+window.saveSession = async () => {
+  const participants = [...document.querySelectorAll('.agent-check-item.selected')].map(el=>el.textContent.trim().split('   ')[0].trim());
+  const data = {
+    formation: document.getElementById('s-formation').value,
+    projet: document.getElementById('s-projet').value,
+    date: document.getElementById('s-date').value,
+    duree: parseFloat(document.getElementById('s-duree').value),
+    formateur: document.getElementById('s-formateur').value,
+    type: document.getElementById('s-type').value,
+    objectifs: document.getElementById('s-objectifs').value,
+    participants, statut: 'planifié',
+    createdAt: new Date().toISOString()
+  };
+  await push(ref(db,'sessions_form'), data);
+  closeModal('add-session');
+};
+
+window.saveAgent = async () => {
+  const data = {
+    prenom: document.getElementById('a-prenom').value,
+    nom: document.getElementById('a-nom').value,
+    projet: document.getElementById('a-projet').value,
+    statut: document.getElementById('a-statut').value,
+    dateInteg: document.getElementById('a-date').value,
+  };
+  await push(ref(db,'agents_form'), data);
+  closeModal('add-agent');
+};
+
+window.saveFormation = async () => {
+  const data = {
+    title: document.getElementById('f-title').value,
+    cat: document.getElementById('f-cat').value,
+    duree: document.getElementById('f-duree').value,
+    modules: document.getElementById('f-modules').value,
+    desc: document.getElementById('f-desc').value,
+  };
+  await push(ref(db,'formations_cat'), data);
+  closeModal('add-formation');
+};
+
+window.deleteSession = async (id) => {
+  if (!confirm('Supprimer cette session ?')) return;
+  await remove(ref(db,`sessions_form/${id}`));
+};
+
+window.deleteFormation = async (id) => {
+  if (!confirm('Supprimer cette formation du catalogue ?')) return;
+  await remove(ref(db,`formations_cat/${id}`));
+};
+
+window.markDone = async (id) => {
+  await set(ref(db,`sessions_form/${id}/statut`), 'réalisé');
+};
+
+// ══ MODALS ══
+window.openModal = (name) => {
+  if (name==='add-session') refreshParticipantsList();
+  document.getElementById(`modal-${name}`).classList.add('open');
+};
+window.closeModal = (name) => document.getElementById(`modal-${name}`).classList.remove('open');
+window.preselectMonth = (m) => {
+  const d = new Date(currentYear, m, 15);
+  document.getElementById('s-date').value = d.toISOString().split('T')[0];
+};
+
+// Click outside modal to close
+document.querySelectorAll('.overlay').forEach(o => {
+  o.addEventListener('click', e => { if(e.target===o) o.classList.remove('open'); });
+});
+
+// ══ NAVIGATION ══
+window.showView = (v) => {
+  document.querySelectorAll('[id^="view-"]').forEach(el=>el.classList.add('hidden'));
+  document.getElementById(`view-${v}`).classList.remove('hidden');
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  const active = [...document.querySelectorAll('.nav-item')].find(n=>n.getAttribute('onclick')?.includes(v));
+  if (active) active.classList.add('active');
+  if (v==='plan-annuel') renderAnnualPlan();
+  if (v==='plan-mensuel') renderMonthlySessions();
+  if (v==='sessions') renderSessionsTable();
+  if (v==='agents') renderAgentView();
+};
+</script>
+</body>
+</html>
