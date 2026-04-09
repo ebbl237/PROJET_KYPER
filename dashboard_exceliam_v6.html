@@ -1,0 +1,2305 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>EXCELIAM · Dashboard Multi-Projets</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#06090f;--bg2:#0d1420;--bg3:#111b2e;
+  --card:#0f1a2e;--card2:#162035;
+  --brd:rgba(0,180,255,.12);--brd2:rgba(0,180,255,.25);
+  --c:#00c8ff;--bl:#1a6fff;--re:#ff3d5a;
+  --gr:#00e676;--ye:#ffc107;--pk:#ff4da6;--pu:#a855f7;
+  --tx:#e8f0fe;--tx2:#8ba5cc;--tx3:#4a6080;
+  --sh:0 0 24px rgba(0,200,255,.12);
+}
+[data-theme=light]{
+  --bg:#f0f4fa;--bg2:#e4eaf6;--bg3:#d5dff0;
+  --card:#fff;--card2:#f5f8ff;
+  --brd:rgba(0,100,200,.13);--brd2:rgba(0,100,200,.28);
+  --c:#0068d6;--bl:#1a6fff;--re:#d6002a;
+  --gr:#00a84f;--ye:#d97706;--pk:#be185d;--pu:#7c3aed;
+  --tx:#0d1f3c;--tx2:#3a5278;--tx3:#8aa0c0;
+  --sh:0 2px 16px rgba(0,80,200,.09);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);font-size:13px}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:var(--bg2)}
+::-webkit-scrollbar-thumb{background:var(--brd2);border-radius:2px}
+
+/* LAYOUT */
+.app{display:flex;flex-direction:column;height:100vh}
+
+/* HEADER */
+.hdr{display:flex;align-items:center;gap:16px;padding:0 20px;height:58px;background:#153354;border-bottom:1px solid #1e4a7a;flex-shrink:0;z-index:50;position:sticky;top:0}
+.logo{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.logo-ico{width:38px;height:38px}
+.logo-txt{font-family:'Rajdhani',sans-serif;font-size:20px;font-weight:700;letter-spacing:2px;color:#fff}
+.logo-sub{font-size:8px;letter-spacing:3px;color:rgba(255,255,255,.5);text-transform:uppercase}
+.hdr-mid{flex:1;display:flex;align-items:center;justify-content:center;gap:6px}
+.proj-select{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:8px;padding:6px 14px;color:#fff;font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:600;letter-spacing:1px;cursor:pointer;outline:none;max-width:280px}
+.proj-badge{font-size:10px;padding:3px 10px;border-radius:20px;font-weight:600;letter-spacing:1px;text-transform:uppercase}
+.hdr-kpi{display:flex;gap:10px;align-items:center;flex-shrink:0}
+.hkpi{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:5px 12px}
+.hkpi .v{font-family:'Rajdhani',sans-serif;font-size:17px;font-weight:700}
+.hkpi .l{font-size:9px;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:1px}
+.theme-btn{width:44px;height:22px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:11px;cursor:pointer;position:relative;flex-shrink:0;transition:background .3s}
+.theme-btn::after{content:'';position:absolute;top:2px;left:2px;width:18px;height:18px;background:var(--c);border-radius:50%;transition:left .25s;box-shadow:0 0 6px var(--c)}
+[data-theme=light] .theme-btn::after{left:24px}
+
+/* NAV */
+.nav{display:flex;gap:2px;padding:0 20px;background:#122d49;border-bottom:1px solid #1e4a7a;flex-shrink:0}
+.ntab{background:none;border:none;border-bottom:2px solid transparent;padding:10px 18px;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,.45);cursor:pointer;font-family:'Rajdhani',sans-serif;font-weight:600;white-space:nowrap;transition:color .2s,border-color .2s}
+.ntab.active{color:#5bc8ff;border-bottom-color:#5bc8ff}
+.ntab:hover:not(.active){color:rgba(255,255,255,.75)}
+
+/* CONTENT */
+.content{flex:1;overflow-y:auto;padding:18px 20px}
+.panel{display:none}
+.panel.active{display:block}
+
+/* CARDS */
+.card{background:var(--card);border:1px solid var(--brd);border-radius:12px;padding:16px}
+.card-title{font-family:'Rajdhani',sans-serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--tx2);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--brd)}
+
+/* GRID HELPERS */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.g5{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}
+.gc{display:flex;flex-direction:column;gap:14px}
+.mb{margin-bottom:14px}
+
+/* KPI CARDS */
+.kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:14px}
+.kpi-c{background:var(--card);border:1px solid var(--brd);border-radius:12px;padding:14px 16px;position:relative;overflow:hidden;cursor:default}
+.kpi-c::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:12px 12px 0 0}
+.kpi-c.ac::before{background:linear-gradient(90deg,var(--c),var(--bl))}
+.kpi-c.ar::before{background:linear-gradient(90deg,var(--re),#ff7043)}
+.kpi-c.ag::before{background:linear-gradient(90deg,var(--gr),#69f0ae)}
+.kpi-c.ay::before{background:linear-gradient(90deg,var(--ye),#ffd54f)}
+.kpi-c.ap::before{background:linear-gradient(90deg,var(--pk),#f48fb1)}
+.kpi-ico{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;margin-bottom:10px}
+.ac .kpi-ico{background:rgba(0,200,255,.1)}
+.ar .kpi-ico{background:rgba(255,61,90,.1)}
+.ag .kpi-ico{background:rgba(0,230,118,.1)}
+.ay .kpi-ico{background:rgba(255,193,7,.1)}
+.ap .kpi-ico{background:rgba(255,77,166,.1)}
+.kv{font-family:'Rajdhani',sans-serif;font-size:28px;font-weight:700;line-height:1}
+.ac .kv{color:var(--c)}.ar .kv{color:var(--re)}.ag .kv{color:var(--gr)}.ay .kv{color:var(--ye)}.ap .kv{color:var(--pk)}
+.kl{font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:1px;margin-top:3px}
+.ktrend{position:absolute;top:12px;right:12px;font-size:10px;padding:2px 7px;border-radius:20px}
+.tup{background:rgba(0,230,118,.1);color:var(--gr)}
+.tdn{background:rgba(255,61,90,.1);color:var(--re)}
+
+/* GAUGES */
+.gauge-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px}
+.gauge-c{background:var(--card);border:1px solid var(--brd);border-radius:12px;padding:16px;display:flex;align-items:center;gap:14px}
+.gauge-svg{position:relative;width:80px;height:80px;flex-shrink:0}
+.gauge-svg svg{transform:rotate(-90deg)}
+.gauge-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
+.gval{font-family:'Rajdhani',sans-serif;font-size:20px;font-weight:700}
+.gauge-info h4{font-family:'Rajdhani',sans-serif;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:var(--tx2);margin-bottom:6px}
+.gauge-info p{font-size:11px;color:var(--tx3)}
+.pbar-wrap{margin-top:8px;display:flex;flex-direction:column;gap:5px}
+.pbar-row{display:flex;align-items:center;gap:8px}
+.pbar-label{font-size:10px;color:var(--tx3);width:90px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pbar-track{flex:1;height:4px;background:var(--bg3);border-radius:2px}
+.pbar-fill{height:100%;border-radius:2px}
+.pbar-val{font-size:10px;font-weight:600;min-width:28px;text-align:right}
+
+/* MAP */
+.map-layout{display:grid;grid-template-columns:1fr 280px;gap:14px;margin-bottom:14px}
+.map-card{background:var(--card);border:1px solid var(--brd);border-radius:12px;padding:14px;overflow:hidden}
+#world-map{width:100%;height:460px;border-radius:8px;z-index:0}
+.map-controls{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+.map-controls select{background:var(--bg2);border:1px solid var(--brd2);border-radius:7px;padding:5px 10px;color:var(--tx);font-size:11px;outline:none;cursor:pointer}
+.map-controls .map-legend{display:flex;gap:12px;align-items:center;margin-left:auto;font-size:10px;color:var(--tx2)}
+.map-controls .leg-item{display:flex;align-items:center;gap:5px}
+.leg-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+/* Leaflet popup custom */
+.leaflet-popup-content-wrapper{background:var(--card2)!important;border:1px solid var(--brd2)!important;border-radius:10px!important;box-shadow:0 4px 20px rgba(0,0,0,.4)!important;color:var(--tx)!important;font-family:'DM Sans',sans-serif!important;font-size:12px!important}
+.leaflet-popup-tip{background:var(--card2)!important}
+.leaflet-popup-close-button{color:var(--tx2)!important}
+.pop-region{font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;margin-bottom:8px;letter-spacing:1px}
+.pop-row{display:flex;justify-content:space-between;gap:16px;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+.pop-row:last-child{border-bottom:none}
+.pop-lbl{color:var(--tx3);font-size:10px;text-transform:uppercase;letter-spacing:.8px}
+.pop-val{font-weight:600}
+
+/* GEO PANEL */
+.geo-panel{background:var(--card);border:1px solid var(--brd);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:0}
+.geo-item{display:flex;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04);gap:8px}
+.geo-item:last-child{border-bottom:none}
+.geo-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.geo-name{flex:1;font-size:12px;color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.geo-val{font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700}
+
+/* FILTERS */
+.filters{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--card);border:1px solid var(--brd);border-radius:10px;padding:12px 16px;margin-bottom:14px}
+.filters label{font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:1px}
+.filters select,.filters input{background:var(--bg2);border:1px solid var(--brd);border-radius:7px;padding:6px 12px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:12px;outline:none;cursor:pointer}
+.filters select:focus,.filters input:focus{border-color:var(--c)}
+.fbtn{background:var(--c);border:none;border-radius:7px;padding:7px 18px;color:#000;font-weight:700;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:opacity .2s}
+.fbtn:hover{opacity:.85}
+.fgrp{display:flex;flex-direction:column;gap:3px}
+
+/* CHARTS */
+.charts-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px}
+.chart-c{background:var(--card);border:1px solid var(--brd);border-radius:12px;padding:14px}
+.chart-c h3{font-family:'Rajdhani',sans-serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--brd)}
+.chart-wrap{position:relative;width:100%}
+
+/* SAISIE */
+.saisie-layout{display:grid;grid-template-columns:380px 1fr;gap:14px}
+.form-section{background:var(--card);border:1px solid var(--brd);border-radius:12px;padding:20px}
+.form-section h2{font-family:'Rajdhani',sans-serif;font-size:14px;letter-spacing:2px;text-transform:uppercase;color:var(--c);margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--brd)}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.fg{display:flex;flex-direction:column;gap:5px}
+.fg label{font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:1px}
+.fg input,.fg select,.fg textarea{background:var(--bg2);border:1px solid var(--brd);border-radius:8px;padding:8px 12px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:12px;outline:none;transition:border-color .2s;width:100%}
+.fg input:focus,.fg select:focus{border-color:var(--c);box-shadow:0 0 0 2px rgba(0,200,255,.1)}
+.btn-primary{background:linear-gradient(135deg,var(--c),var(--bl));border:none;border-radius:8px;padding:10px 24px;color:#000;font-weight:700;font-size:12px;cursor:pointer;letter-spacing:.5px;font-family:'DM Sans',sans-serif;width:100%;transition:opacity .2s;margin-top:6px}
+.btn-primary:hover{opacity:.88}
+.btn-sec{background:var(--bg2);border:1px solid var(--brd2);border-radius:8px;padding:8px 18px;color:var(--tx2);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s}
+.btn-sec:hover{border-color:var(--c);color:var(--c)}
+.btn-danger{background:rgba(255,61,90,.1);border:1px solid rgba(255,61,90,.25);border-radius:6px;padding:4px 10px;color:var(--re);font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s}
+.btn-danger:hover{background:rgba(255,61,90,.2)}
+
+/* TABLE */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:11px}
+th{color:var(--tx3);text-align:left;padding:8px 10px;border-bottom:1px solid var(--brd);font-weight:500;text-transform:uppercase;letter-spacing:.8px;white-space:nowrap}
+td{padding:7px 10px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--tx2);white-space:nowrap}
+tr:hover td{background:var(--bg3)}
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+
+/* PROJETS */
+.projets-layout{display:grid;grid-template-columns:340px 1fr;gap:14px}
+.proj-card{background:var(--card);border:1px solid var(--brd);border-radius:12px;padding:16px;cursor:pointer;transition:border-color .2s,box-shadow .2s;position:relative}
+.proj-card:hover,.proj-card.active-proj{border-color:var(--brd2);box-shadow:var(--sh)}
+.proj-card.active-proj::before{content:'●';position:absolute;top:14px;right:14px;font-size:8px;color:var(--gr)}
+.proj-name{font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;letter-spacing:1px;margin-bottom:4px}
+.proj-meta{font-size:11px;color:var(--tx3)}
+.proj-kpis{display:flex;gap:16px;margin-top:10px;padding-top:10px;border-top:1px solid var(--brd)}
+.proj-kpi-item{display:flex;flex-direction:column;gap:2px}
+.proj-kpi-v{font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700}
+.proj-kpi-l{font-size:9px;color:var(--tx3);text-transform:uppercase;letter-spacing:.8px}
+
+/* PARAMS */
+.params-layout{display:grid;grid-template-columns:200px 1fr;gap:14px}
+.params-nav{background:var(--card);border:1px solid var(--brd);border-radius:12px;padding:8px}
+.pnav-item{display:block;width:100%;padding:10px 14px;background:none;border:none;border-radius:8px;color:var(--tx2);font-size:12px;text-align:left;cursor:pointer;font-family:'DM Sans',sans-serif;letter-spacing:.5px;transition:all .2s}
+.pnav-item.active,.pnav-item:hover{background:var(--bg2);color:var(--c)}
+
+/* IMPORT CSV */
+.drop-zone{border:2px dashed var(--brd2);border-radius:10px;padding:24px;text-align:center;cursor:pointer;transition:all .2s;margin-bottom:12px}
+.drop-zone:hover{border-color:var(--c);background:rgba(0,200,255,.03)}
+.drop-zone p{color:var(--tx3);font-size:11px;margin-top:6px}
+
+/* ALERTS */
+.alert{padding:10px 14px;border-radius:8px;font-size:12px;margin-bottom:10px;display:none}
+.alert.show{display:block}
+.alert-s{background:rgba(0,230,118,.1);border:1px solid rgba(0,230,118,.25);color:var(--gr)}
+.alert-e{background:rgba(255,61,90,.1);border:1px solid rgba(255,61,90,.25);color:var(--re)}
+.alert-i{background:rgba(0,200,255,.08);border:1px solid rgba(0,200,255,.2);color:var(--c)}
+
+/* EMPTY STATE */
+.empty{text-align:center;padding:40px 20px;color:var(--tx3)}
+.empty .ico{font-size:40px;margin-bottom:10px}
+.empty p{font-size:12px}
+
+/* REGION COORD TABLE */
+.rc-table{width:100%;border-collapse:collapse;font-size:11px}
+.rc-table th{color:var(--tx3);text-align:left;padding:6px 8px;border-bottom:1px solid var(--brd);font-weight:500;text-transform:uppercase;letter-spacing:.8px}
+.rc-table td{padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.04)}
+.rc-input{background:var(--bg2);border:1px solid var(--brd);border-radius:5px;padding:4px 8px;color:var(--tx);font-size:11px;width:80px;outline:none}
+.rc-input:focus{border-color:var(--c)}
+
+/* EVOL CHART */
+.evol-card{background:var(--card);border:1px solid var(--brd);border-radius:12px;padding:14px;margin-bottom:14px}
+.evol-card h3{font-family:'Rajdhani',sans-serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--tx2);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--brd)}
+
+/* JOIN TABLE */
+#joinTable td,#joinTable th{padding:6px 8px;white-space:nowrap;font-size:11px}
+.join-badge-g{background:rgba(0,230,118,.12);color:var(--gr);padding:2px 8px;border-radius:12px;font-weight:700;font-size:10px}
+.join-badge-y{background:rgba(255,193,7,.12);color:var(--ye);padding:2px 8px;border-radius:12px;font-weight:700;font-size:10px}
+.join-badge-r{background:rgba(255,61,90,.12);color:var(--re);padding:2px 8px;border-radius:12px;font-weight:700;font-size:10px}
+
+@media(max-width:900px){
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+  .gauge-row,.charts-grid{grid-template-columns:1fr}
+  .map-layout,.saisie-layout,.projets-layout,.params-layout{grid-template-columns:1fr}
+  .hdr-kpi{display:none}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- HEADER -->
+<header class="hdr">
+  <div class="logo">
+    <img src="data:image/jpeg;base64,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" alt="EXCELIAM" style="height:42px;border-radius:6px;object-fit:contain"/>
+  </div>
+  <div class="hdr-mid">
+    <select class="proj-select" id="projSwitch" onchange="switchProject(this.value)">
+      <option value="">— Sélectionner un projet —</option>
+    </select>
+    <span id="projBadge" class="proj-badge" style="display:none"></span>
+  </div>
+  <div class="hdr-kpi">
+    <div class="hkpi"><div><div class="v" id="hProd" style="color:var(--c)">0</div><div class="l">Production</div></div></div>
+    <div class="hkpi"><div><div class="v" id="hLivr" style="color:var(--re)">0</div><div class="l">Livraisons</div></div></div>
+    <div class="hkpi"><div><div class="v" id="hAcc" style="color:var(--gr)">0</div><div class="l">Accords</div></div></div>
+    <div class="hkpi"><div><div class="v" id="hCA" style="color:var(--ye)">0</div><div class="l">Cont.Arg.</div></div></div>
+  </div>
+  <button class="theme-btn" onclick="toggleTheme()" title="Mode jour/nuit"></button>
+</header>
+
+<!-- NAV -->
+<nav class="nav">
+  <button class="ntab active" onclick="goTab('dashboard',this)">📊 Dashboard</button>
+  <button class="ntab" onclick="goTab('saisie',this)">✏️ Saisie données</button>
+  <button class="ntab" onclick="goTab('projets',this)">📁 Projets</button>
+  <button class="ntab" onclick="goTab('params',this)">⚙️ Paramètres</button>
+</nav>
+
+<!-- MAP TOOLTIP -->
+
+<!-- CONTENT -->
+<div class="content">
+
+<!-- ═══════════════ DASHBOARD ═══════════════ -->
+<div class="panel active" id="panel-dashboard">
+
+  <!-- KPI CARDS -->
+  <div class="kpi-grid" id="kpiGrid">
+    <div class="kpi-c ac"><div class="kpi-ico">📞</div><div class="kv" id="kProd">0</div><div class="kl">Production</div></div>
+    <div class="kpi-c ar"><div class="kpi-ico">📦</div><div class="kv" id="kLivr">0</div><div class="kl">Livraisons</div></div>
+    <div class="kpi-c ag"><div class="kpi-ico">✅</div><div class="kv" id="kAcc">0</div><div class="kl">Accords</div></div>
+    <div class="kpi-c ay"><div class="kpi-ico">🗣️</div><div class="kv" id="kCA">0</div><div class="kl">Contact Argumenté</div></div>
+    <div class="kpi-c ap"><div class="kpi-ico">📋</div><div class="kv" id="kFC">0</div><div class="kl">Fiche Close</div></div>
+  </div>
+
+  <!-- GAUGES -->
+  <div class="gauge-row">
+    <div class="gauge-c">
+      <div class="gauge-svg">
+        <svg width="80" height="80" viewBox="0 0 80 80">
+          <circle cx="40" cy="40" r="32" fill="none" stroke="var(--bg3)" stroke-width="7"/>
+          <circle id="gEff" cx="40" cy="40" r="32" fill="none" stroke="var(--c)" stroke-width="7" stroke-dasharray="201.06" stroke-dashoffset="201.06" stroke-linecap="round"/>
+        </svg>
+        <div class="gauge-center"><div class="gval" id="gEffTxt" style="color:var(--c)">0%</div></div>
+      </div>
+      <div class="gauge-info">
+        <h4>Efficacité Livraison</h4>
+        <p>Livraisons / Production</p>
+        <div class="pbar-wrap" id="effBars"></div>
+      </div>
+    </div>
+    <div class="gauge-c">
+      <div class="gauge-svg">
+        <svg width="80" height="80" viewBox="0 0 80 80">
+          <circle cx="40" cy="40" r="32" fill="none" stroke="var(--bg3)" stroke-width="7"/>
+          <circle id="gRat" cx="40" cy="40" r="32" fill="none" stroke="var(--gr)" stroke-width="7" stroke-dasharray="201.06" stroke-dashoffset="201.06" stroke-linecap="round"/>
+        </svg>
+        <div class="gauge-center"><div class="gval" id="gRatTxt" style="color:var(--gr)">0%</div></div>
+      </div>
+      <div class="gauge-info">
+        <h4>Ratio Accords/Livr.</h4>
+        <p>Accords / Livraisons</p>
+        <div class="pbar-wrap" id="ratBars"></div>
+      </div>
+    </div>
+    <div class="gauge-c">
+      <div class="gauge-svg">
+        <svg width="80" height="80" viewBox="0 0 80 80">
+          <circle cx="40" cy="40" r="32" fill="none" stroke="var(--bg3)" stroke-width="7"/>
+          <circle id="gFC" cx="40" cy="40" r="32" fill="none" stroke="var(--ye)" stroke-width="7" stroke-dasharray="201.06" stroke-dashoffset="201.06" stroke-linecap="round"/>
+        </svg>
+        <div class="gauge-center"><div class="gval" id="gFCTxt" style="color:var(--ye)">0%</div></div>
+      </div>
+      <div class="gauge-info">
+        <h4>Taux F.C</h4>
+        <p>F.C / Production</p>
+        <div class="pbar-wrap" id="fcBars"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GAUGES ROW 2 -->
+  <div class="gauge-row" style="margin-bottom:14px">
+    <div class="gauge-c">
+      <div class="gauge-svg">
+        <svg width="80" height="80" viewBox="0 0 80 80">
+          <circle cx="40" cy="40" r="32" fill="none" stroke="var(--bg3)" stroke-width="7"/>
+          <circle id="gCA" cx="40" cy="40" r="32" fill="none" stroke="var(--ye)" stroke-width="7" stroke-dasharray="201.06" stroke-dashoffset="201.06" stroke-linecap="round"/>
+        </svg>
+        <div class="gauge-center"><div class="gval" id="gCATxt" style="color:var(--ye)">0%</div></div>
+      </div>
+      <div class="gauge-info">
+        <h4>Taux Cont. Argumenté</h4>
+        <p>Cont. Arg. / Production</p>
+        <div class="pbar-wrap" id="caBars"></div>
+      </div>
+    </div>
+    <div class="gauge-c">
+      <div class="gauge-svg">
+        <svg width="80" height="80" viewBox="0 0 80 80">
+          <circle cx="40" cy="40" r="32" fill="none" stroke="var(--bg3)" stroke-width="7"/>
+          <circle id="gFT" cx="40" cy="40" r="32" fill="none" stroke="var(--pk)" stroke-width="7" stroke-dasharray="201.06" stroke-dashoffset="201.06" stroke-linecap="round"/>
+        </svg>
+        <div class="gauge-center"><div class="gval" id="gFTTxt" style="color:var(--pk)">0%</div></div>
+      </div>
+      <div class="gauge-info">
+        <h4>Taux Fiche Traitée</h4>
+        <p>Cont. Arg. / Livraisons</p>
+        <div class="pbar-wrap" id="ftBars"></div>
+      </div>
+    </div>
+    <div class="gauge-c">
+      <div class="gauge-svg">
+        <svg width="80" height="80" viewBox="0 0 80 80">
+          <circle cx="40" cy="40" r="32" fill="none" stroke="var(--bg3)" stroke-width="7"/>
+          <circle id="gJoin" cx="40" cy="40" r="32" fill="none" stroke="var(--pu)" stroke-width="7" stroke-dasharray="201.06" stroke-dashoffset="201.06" stroke-linecap="round"/>
+        </svg>
+        <div class="gauge-center"><div class="gval" id="gJoinTxt" style="color:var(--pu)">0%</div></div>
+      </div>
+      <div class="gauge-info">
+        <h4>Joignabilité Globale</h4>
+        <p>Livraisons / Production</p>
+        <div class="pbar-wrap" id="joinBars"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FILTERS -->
+  <div class="filters">
+    <div class="fgrp"><label>Région</label>
+      <select id="fRegion" onchange="applyFilters()"><option value="all">Toutes</option></select>
+    </div>
+    <div class="fgrp"><label>Année</label>
+      <select id="fAnnee" onchange="applyFilters()"><option value="all">Toutes</option></select>
+    </div>
+    <div class="fgrp"><label>Mois</label>
+      <select id="fMois" onchange="applyFilters()">
+        <option value="all">Tous</option>
+        <option value="1">Janvier</option><option value="2">Février</option><option value="3">Mars</option>
+        <option value="4">Avril</option><option value="5">Mai</option><option value="6">Juin</option>
+        <option value="7">Juillet</option><option value="8">Août</option><option value="9">Septembre</option>
+        <option value="10">Octobre</option><option value="11">Novembre</option><option value="12">Décembre</option>
+      </select>
+    </div>
+    <div class="fgrp"><label>Semaine</label>
+      <select id="fSem" onchange="applyFilters()"><option value="all">Toutes</option></select>
+    </div>
+    <div class="fgrp"><label>Statut</label>
+      <select id="fStatut" onchange="applyFilters()"><option value="all">Tous</option></select>
+    </div>
+    <div class="fgrp"><label>Joignabilité</label>
+      <select id="fJoin" onchange="applyFilters()">
+        <option value="all">Toutes</option>
+        <option value="high">≥70% (Haute)</option>
+        <option value="mid">40–70% (Moyenne)</option>
+        <option value="low">&lt;40% (Faible)</option>
+      </select>
+    </div>
+    <button class="fbtn" onclick="resetFilters()">↺ Réinitialiser</button>
+    <div style="margin-left:auto;font-size:11px;color:var(--tx3)"><span id="fCount">0</span> enregistrements</div>
+  </div>
+
+  <!-- MAP + GEO -->
+  <div class="map-layout">
+    <div class="map-card">
+      <div class="map-controls">
+        <div class="card-title" style="margin-bottom:0;padding-bottom:0;border-bottom:none">🌍 Carte interactive des performances</div>
+        <select id="mapCountryFilter" onchange="filterMapByCountry(this.value)" title="Filtrer par pays">
+          <option value="">🌍 Tous les pays</option>
+        </select>
+        <select id="mapKPIType" onchange="renderMap()" title="Type KPI affiché">
+          <option value="both">Livraisons + Accords</option>
+          <option value="livraison">Livraisons uniquement</option>
+          <option value="accords">Accords uniquement</option>
+        </select>
+        <div class="map-legend">
+          <div class="leg-item"><div class="leg-dot" style="background:#ff3d5a;box-shadow:0 0 5px #ff3d5a"></div>Livraisons</div>
+          <div class="leg-item"><div class="leg-dot" style="background:#00e676;box-shadow:0 0 5px #00e676"></div>Accords</div>
+          <div class="leg-item"><div class="leg-dot" style="background:#00c8ff;box-shadow:0 0 5px #00c8ff"></div>Production</div>
+        </div>
+      </div>
+      <div id="world-map"></div>
+    </div>
+    <div class="gc">
+      <div class="geo-panel">
+        <div class="card-title">📍 Livraisons par région</div>
+        <div id="geoLivr"></div>
+      </div>
+      <div class="geo-panel">
+        <div class="card-title">🏆 Top Joignabilité (%)</div>
+        <div id="geoJoin"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHARTS -->
+  <div class="charts-grid">
+    <div class="chart-c"><h3 style="color:var(--ye)">🗣️ Top 5 — Contact Argumenté</h3><div class="chart-wrap" id="cCA"><canvas id="ch-ca"></canvas></div></div>
+    <div class="chart-c"><h3 style="color:var(--ye)">⚠ Flop 5 — Efficacité</h3><div class="chart-wrap" id="cFlop"><canvas id="ch-flop"></canvas></div></div>
+    <div class="chart-c"><h3 style="color:var(--re)">📦 Top 5 — Livraisons</h3><div class="chart-wrap" id="cLivr"><canvas id="ch-livr"></canvas></div></div>
+    <div class="chart-c"><h3 style="color:var(--bl)">📊 Top 5 — Ratio Accords</h3><div class="chart-wrap" id="cRat"><canvas id="ch-rat"></canvas></div></div>
+    <div class="chart-c"><h3 style="color:var(--gr)">✅ Top 5 — Accords</h3><div class="chart-wrap" id="cAcc"><canvas id="ch-acc"></canvas></div></div>
+    <div class="chart-c"><h3 style="color:var(--c)">📈 Top 5 — Production</h3><div class="chart-wrap" id="cProd"><canvas id="ch-prod"></canvas></div></div>
+  </div>
+
+  <!-- TABLEAU ANALYSE JOIGNABILITÉ -->
+  <div class="card mb" style="margin-bottom:14px">
+    <div class="card-title">🗺️ Analyse par région — Joignabilité &amp; Performance</div>
+    <div class="tbl-wrap">
+      <table id="joinTable">
+        <thead><tr>
+          <th>#</th><th>Région</th><th>Production</th><th>Livraisons</th>
+          <th style="color:var(--pu)">Joignabilité%</th>
+          <th>Accords</th><th style="color:var(--gr)">Ratio%</th>
+          <th style="color:var(--ye)">Cont. Arg.</th><th style="color:var(--ye)">Tx Arg.%</th>
+          <th style="color:var(--pk)">Fiche Close</th><th style="color:var(--pk)">Tx FC%</th>
+          <th style="color:var(--c)">Tx FT%</th>
+        </tr></thead>
+        <tbody id="joinTableBody"></tbody>
+      </table>
+      <div id="joinTableEmpty" class="empty" style="display:none"><div class="ico">📭</div><p>Aucune donnée.</p></div>
+    </div>
+  </div>
+
+  <!-- EVOLUTION -->
+  <div class="evol-card">
+    <h3>📈 Évolution mensuelle — Livraisons & Accords</h3>
+    <div class="chart-wrap" style="height:220px"><canvas id="ch-evol"></canvas></div>
+  </div>
+
+</div>
+
+<!-- ═══════════════ SAISIE ═══════════════ -->
+<div class="panel" id="panel-saisie">
+  <div class="saisie-layout">
+
+    <!-- FORM -->
+    <div class="form-section">
+      <h2>✏️ Saisie d'une entrée</h2>
+      <div id="alert-saisie" class="alert"></div>
+
+      <div class="frow">
+        <div class="fg"><label>Date appel *</label><input type="date" id="f-date"/></div>
+        <div class="fg"><label>Projet *</label><select id="f-projet"><option value="">Sélectionner...</option></select></div>
+      </div>
+      <div class="frow">
+        <div class="fg"><label>Région *</label><input type="text" id="f-region" placeholder="ex: Abidjan, Alsace..."/></div>
+        <div class="fg"><label>Statut</label>
+          <select id="f-statut">
+            <option>Livré</option><option>Accord</option><option>Refus</option><option>Promesse</option><option>Absent</option><option>Rappel</option>
+          </select>
+        </div>
+      </div>
+      <div class="frow">
+        <div class="fg"><label>Occurence Production</label><input type="number" id="f-prod" min="0" placeholder="0"/></div>
+        <div class="fg"><label>Occurence Livraison</label><input type="number" id="f-livr" min="0" placeholder="0"/></div>
+      </div>
+      <div class="frow">
+        <div class="fg"><label>Accords</label><input type="number" id="f-acc" min="0" placeholder="0"/></div>
+        <div class="fg"><label>Fiche Close</label><input type="number" id="f-fc" min="0" placeholder="0"/></div>
+      </div>
+      <div class="frow">
+        <div class="fg"><label>Contact Argumenté</label><input type="number" id="f-ca" min="0" placeholder="0"/></div>
+        <div class="fg"><label>Semaine</label><input type="number" id="f-sem" min="1" max="53" placeholder="1-53"/></div>
+      </div>
+      <div class="frow">
+        <div class="fg"><label>Mois</label><input type="number" id="f-mois" min="1" max="12" placeholder="1-12"/></div>
+        <div class="fg"><label>Année</label><input type="number" id="f-annee" min="2020" max="2030" placeholder="2024"/></div>
+      </div>
+      <button class="btn-primary" onclick="saveRecord()">💾 Enregistrer</button>
+      <div style="margin-top:10px;display:flex;gap:8px">
+        <button class="btn-sec" onclick="clearForm()">🗑 Vider le formulaire</button>
+        <button class="btn-sec" style="flex:1" onclick="autoFillDate()">📅 Date d'aujourd'hui</button>
+      </div>
+
+      <div style="margin-top:20px;border-top:1px solid var(--brd);padding-top:16px">
+        <div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">📥 Import CSV / Excel</div>
+
+        <!-- ÉTAPE 1 : sélection fichier -->
+        <div id="dropZoneWrap">
+          <div class="drop-zone" id="dropZone"
+               onclick="document.getElementById('csvInput').click()"
+               ondragover="event.preventDefault();this.style.borderColor='var(--c)'"
+               ondragleave="this.style.borderColor=''"
+               ondrop="event.preventDefault();handleDrop(event)">
+            <div style="font-size:28px">📂</div>
+            <p style="margin-top:6px"><strong style="color:var(--tx)">Glisser-déposer</strong> ou cliquer pour sélectionner<br>
+            <span style="font-size:10px">CSV · Excel (.xlsx .xls) — séparateur auto-détecté</span></p>
+            <input type="file" id="csvInput" style="display:none" accept=".csv,.txt,.xlsx,.xls" onchange="loadFilePreview(event)"/>
+          </div>
+          <div id="alert-csv" class="alert" style="margin-top:8px"></div>
+        </div>
+
+        <!-- ÉTAPE 2 : aperçu avant validation -->
+        <div id="importPreviewWrap" style="display:none">
+          <div id="importPreviewInfo" style="background:rgba(0,200,255,.07);border:1px solid rgba(0,200,255,.2);border-radius:8px;padding:10px 14px;font-size:11px;color:var(--tx2);margin-bottom:10px"></div>
+          <div id="importPreviewColMap" style="font-size:10px;color:var(--tx3);margin-bottom:8px;line-height:1.7"></div>
+          <div style="overflow-x:auto;max-height:180px;border:1px solid var(--brd);border-radius:8px;margin-bottom:10px">
+            <table id="importPreviewTable" style="font-size:10px;width:100%;border-collapse:collapse">
+              <thead id="importPreviewHead"></thead>
+              <tbody id="importPreviewBody"></tbody>
+            </table>
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:8px">
+            <button class="btn-primary" style="flex:1" onclick="validateImport()">✅ Valider et importer</button>
+            <button class="btn-sec" onclick="cancelImport()">✖ Annuler</button>
+          </div>
+          <div id="alert-csv2" class="alert"></div>
+        </div>
+
+        <!-- BOUTONS ACTIONS -->
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
+          <button class="btn-sec" style="flex:1" onclick="refreshAll()">🔄 Actualiser</button>
+          <button class="btn-sec" style="flex:1" onclick="downloadTemplate()">⬇️ Template CSV</button>
+        </div>
+
+        <!-- HISTORIQUE DES IMPORTS -->
+        <div style="margin-top:12px" id="importSessionsWrap">
+          <div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">🗂 Imports enregistrés</div>
+          <div id="importSessionsList"></div>
+          <div id="importSessionsEmpty" style="font-size:11px;color:var(--tx3);padding:8px 0">Aucun import enregistré.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TABLE -->
+    <div class="form-section">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <h2 style="margin-bottom:0;padding-bottom:0;border-bottom:none">📋 Données enregistrées</h2>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="text" id="searchTbl" placeholder="🔍 Rechercher..." style="padding:5px 10px;font-size:11px;background:var(--bg2);border:1px solid var(--brd);border-radius:7px;color:var(--tx);outline:none;width:160px" oninput="renderTable()"/>
+          <button class="btn-danger" onclick="clearAllData()">🗑 Tout effacer</button>
+          <button class="btn-sec" onclick="exportCSV()">⬆️ Export CSV</button>
+        </div>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th>#</th><th>Date</th><th>Projet</th><th>Région</th><th>Statut</th>
+            <th>Production</th><th>Livraison</th><th>Accords</th><th>Cont.Arg</th><th>F.Close</th>
+            <th>Mois</th><th>Sem.</th><th></th>
+          </tr></thead>
+          <tbody id="dataTable"></tbody>
+        </table>
+        <div id="emptyTable" class="empty"><div class="ico">📭</div><p>Aucune donnée. Commencez à saisir ou importez un CSV.</p></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════ PROJETS ═══════════════ -->
+<div class="panel" id="panel-projets">
+  <div class="projets-layout">
+
+    <!-- CREATE -->
+    <div class="form-section">
+      <h2>➕ Créer un projet</h2>
+      <div id="alert-proj" class="alert"></div>
+      <div class="fg mb"><label>Nom du projet *</label><input type="text" id="p-nom" placeholder="ex: FIDELIS 2024"/></div>
+      <div class="fg mb"><label>Pays *</label>
+        <select id="p-pays">
+          <option value="">Sélectionner un pays...</option>
+        </select>
+      </div>
+      <div class="fg mb"><label>Description</label><input type="text" id="p-desc" placeholder="Description courte du projet"/></div>
+      <div class="fg mb"><label>Couleur du projet</label>
+        <div style="display:flex;gap:8px;margin-top:4px" id="colorPicker">
+          <div class="color-opt" data-c="#00c8ff" style="width:26px;height:26px;border-radius:6px;background:#00c8ff;cursor:pointer;border:2px solid transparent" onclick="selectProjColor(this)"></div>
+          <div class="color-opt" data-c="#00e676" style="width:26px;height:26px;border-radius:6px;background:#00e676;cursor:pointer;border:2px solid transparent" onclick="selectProjColor(this)"></div>
+          <div class="color-opt" data-c="#ff3d5a" style="width:26px;height:26px;border-radius:6px;background:#ff3d5a;cursor:pointer;border:2px solid transparent" onclick="selectProjColor(this)"></div>
+          <div class="color-opt" data-c="#ffc107" style="width:26px;height:26px;border-radius:6px;background:#ffc107;cursor:pointer;border:2px solid transparent" onclick="selectProjColor(this)"></div>
+          <div class="color-opt" data-c="#ff4da6" style="width:26px;height:26px;border-radius:6px;background:#ff4da6;cursor:pointer;border:2px solid transparent" onclick="selectProjColor(this)"></div>
+          <div class="color-opt" data-c="#a855f7" style="width:26px;height:26px;border-radius:6px;background:#a855f7;cursor:pointer;border:2px solid transparent" onclick="selectProjColor(this)"></div>
+          <div class="color-opt" data-c="#1a6fff" style="width:26px;height:26px;border-radius:6px;background:#1a6fff;cursor:pointer;border:2px solid transparent" onclick="selectProjColor(this)"></div>
+        </div>
+        <input type="hidden" id="p-color" value="#00c8ff"/>
+      </div>
+      <div class="fg mb"><label>Objectif Livraisons/mois</label><input type="number" id="p-objLivr" placeholder="ex: 3000"/></div>
+      <div class="fg mb"><label>Objectif Ratio Accords (%)</label><input type="number" id="p-objRat" placeholder="ex: 50"/></div>
+      <button class="btn-primary" onclick="createProject()">🚀 Créer le projet</button>
+    </div>
+
+    <!-- LIST -->
+    <div>
+      <div id="projList" class="gc"></div>
+      <div id="emptyProj" class="empty"><div class="ico">📁</div><p>Aucun projet. Créez votre premier projet.</p></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════ PARAMS ═══════════════ -->
+<div class="panel" id="panel-params">
+  <div class="params-layout">
+    <div class="params-nav">
+      <button class="pnav-item active" onclick="showParamTab('carte',this)">🗺 Carte & Régions</button>
+      <button class="pnav-item" onclick="showParamTab('objectifs',this)">🎯 Objectifs KPI</button>
+      <button class="pnav-item" onclick="showParamTab('trace',this)">📋 Traçabilité</button>
+      <button class="pnav-item" onclick="showParamTab('data',this)">🗄 Données brutes</button>
+    </div>
+    <div>
+      <!-- CARTE -->
+      <div class="form-section" id="ptab-carte">
+        <h2>🗺 Coordonnées des régions</h2>
+        <p style="font-size:11px;color:var(--tx3);margin-bottom:14px;line-height:1.6">Définissez la latitude et longitude pour chaque région afin qu'elle apparaisse comme un point sur la carte mondiale. Ces coordonnées sont sauvegardées par projet.</p>
+        <div class="fg mb"><label>Projet actif</label>
+          <select id="rcProjSel" onchange="renderRegionCoords()"><option value="">Sélectionner un projet...</option></select>
+        </div>
+        <div id="rcTableWrap">
+          <div class="empty"><div class="ico">🗺</div><p>Sélectionnez un projet pour gérer les coordonnées de ses régions.</p></div>
+        </div>
+        <div style="margin-top:12px" id="rcSaveWrap" hidden>
+          <button class="btn-primary" onclick="saveRegionCoords()">💾 Sauvegarder les coordonnées</button>
+        </div>
+      </div>
+
+      <!-- OBJECTIFS -->
+      <div class="form-section" id="ptab-objectifs" hidden>
+        <h2>🎯 Objectifs KPI par projet</h2>
+        <div class="fg mb"><label>Projet</label>
+          <select id="objProjSel" onchange="renderObjectifs()"><option value="">Sélectionner...</option></select>
+        </div>
+        <div id="objForm" hidden>
+          <div class="frow">
+            <div class="fg"><label>Obj. Production</label><input type="number" id="obj-prod" placeholder="ex: 5000"/></div>
+            <div class="fg"><label>Obj. Livraisons</label><input type="number" id="obj-livr" placeholder="ex: 3000"/></div>
+          </div>
+          <div class="frow">
+            <div class="fg"><label>Obj. Accords</label><input type="number" id="obj-acc" placeholder="ex: 1500"/></div>
+            <div class="fg"><label>Obj. Ratio Accords (%)</label><input type="number" id="obj-rat" placeholder="ex: 50"/></div>
+          </div>
+          <div class="frow">
+            <div class="fg"><label>Obj. Contact Argumenté</label><input type="number" id="obj-ca" placeholder="ex: 500"/></div>
+            <div class="fg"><label>Seuil alerte (%)</label><input type="number" id="obj-seuil" placeholder="ex: 70"/></div>
+          </div>
+          <button class="btn-primary" onclick="saveObjectifs()">💾 Sauvegarder les objectifs</button>
+        </div>
+      </div>
+
+      <!-- TRACE -->
+      <div class="form-section" id="ptab-trace" hidden>
+        <h2>📋 Journal des actions</h2>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Date/Heure</th><th>Action</th><th>Détail</th></tr></thead>
+            <tbody id="traceTable"></tbody>
+          </table>
+          <div id="emptyTrace" class="empty"><div class="ico">📋</div><p>Aucune action enregistrée.</p></div>
+        </div>
+        <div style="margin-top:12px">
+          <button class="btn-danger" onclick="clearTrace()">🗑 Effacer le journal</button>
+        </div>
+      </div>
+
+      <!-- DATA BRUTES -->
+      <div class="form-section" id="ptab-data" hidden>
+        <h2>🗄 Gestion des données</h2>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
+          <button class="btn-sec" onclick="exportCSV()">⬆️ Exporter toutes les données (CSV)</button>
+          <button class="btn-sec" onclick="exportJSON()">⬆️ Exporter (JSON)</button>
+          <button class="btn-sec" onclick="importJSON()">⬇️ Importer sauvegarde JSON</button>
+          <input type="file" id="jsonInput" style="display:none" accept=".json" onchange="loadJSONBackup(event)"/>
+        </div>
+        <div style="background:var(--bg2);border:1px solid var(--brd);border-radius:8px;padding:14px;font-size:11px;color:var(--tx2)">
+          <div style="margin-bottom:6px"><strong style="color:var(--c)">Projets :</strong> <span id="statProj">0</span></div>
+          <div style="margin-bottom:6px"><strong style="color:var(--gr)">Enregistrements :</strong> <span id="statRec">0</span></div>
+          <div style="margin-bottom:6px"><strong style="color:var(--ye)">Stockage utilisé :</strong> <span id="statSize">0 Ko</span></div>
+          <div><strong style="color:var(--tx3)">Dernière modification :</strong> <span id="statDate">—</span></div>
+        </div>
+        <div style="margin-top:14px">
+          <button class="btn-danger" onclick="clearAllDataGlobal()">⚠️ Effacer TOUTES les données (projets + enregistrements)</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+</div><!-- /content -->
+</div><!-- /app -->
+
+<script>
+/* ════════════════════════════════════════════════════════
+   EXCELIAM DASHBOARD v2 — Fully Functional
+   ════════════════════════════════════════════════════════ */
+
+const SK = 'exceliam_db_v2';
+
+/* ─── COUNTRIES (name, D3 numeric id, center lat/lng) ─── */
+/* ─── REGION COORDINATES DEFAULTS (auto-lookup) ─── */
+/* ═══════════════════════════════════════════════════════════════
+   RÉGION CENTROIDS — coordonnées géographiques exactes du centre
+   de chaque région/département/ville pour placement précis sur carte
+   ═══════════════════════════════════════════════════════════════ */
+const REGION_DEFAULTS = {
+  /* ── FRANCE — régions officielles (centroïdes géographiques) ── */
+  "Île-de-France":[48.6443,2.3669],"Ile-de-France":[48.6443,2.3669],
+  "Auvergne-Rhône-Alpes":[45.4473,4.3859],"Auvergne":[45.7956,3.1010],"Rhône-Alpes":[45.4474,4.3859],
+  "Nouvelle-Aquitaine":[44.7002,-0.6544],"Aquitaine":[44.7002,-0.6544],
+  "Occitanie":[43.8927,2.3240],"Languedoc-Roussillon":[43.6119,3.8772],"Midi-Pyrénées":[43.6047,1.4442],
+  "Hauts-de-France":[50.2801,2.7756],"Nord-Pas-de-Calais":[50.5047,2.6280],"Picardie":[49.6717,2.5455],
+  "Grand Est":[48.6998,6.1878],"Alsace":[48.3165,7.4416],"Lorraine":[48.8581,6.0676],
+  "Champagne-Ardennes":[48.7513,4.3946],"Champagne-Ardenne":[48.7513,4.3946],
+  "Normandie":[49.0993,0.1440],"Haute-Normandie":[49.3667,1.0667],"Basse-Normandie":[48.8500,-0.5833],
+  "Bretagne":[48.2020,-2.9326],
+  "Pays de la Loire":[47.7632,-0.3299],"Pays-de-la-Loire":[47.7632,-0.3299],
+  "Centre-Val de Loire":[47.5765,1.6734],"Centre":[47.5765,1.6734],
+  "Bourgogne-Franche-Comté":[47.2805,4.9994],"Bourgogne":[47.2805,4.9994],"Franche-Comté":[47.2839,5.9953],
+  "PACA":[43.9352,6.0679],"Provence-Alpes-Côte d'Azur":[43.9352,6.0679],"Provence-Alpes-Côte d'Azur":[43.9352,6.0679],
+  "Corse":[42.0396,9.0129],
+  "Poitou-Charentes":[46.3260,-0.0786],"Limousin":[45.7310,1.7511],
+  /* ── France — départements clés ── */
+  "Paris":[48.8566,2.3522],"Seine-et-Marne":[48.6191,2.9483],"Yvelines":[48.7788,1.9672],
+  "Seine-Saint-Denis":[48.9097,2.4836],"Val-de-Marne":[48.7802,2.4717],
+  "Rhône":[45.7578,4.8320],"Lyon":[45.7578,4.8320],
+  "Bouches-du-Rhône":[43.5298,5.3984],"Marseille":[43.2965,5.3811],
+  "Gironde":[44.7072,-0.5040],"Bordeaux":[44.8378,-0.5792],
+  "Haute-Garonne":[43.6000,1.4333],"Toulouse":[43.6047,1.4442],
+  "Nord":[50.5047,3.1302],"Lille":[50.6292,3.0573],
+  "Bas-Rhône":[48.3165,7.4416],"Haut-Rhin":[47.7802,7.3509],
+  "Loire-Atlantique":[47.2184,-1.5536],"Nantes":[47.2184,-1.5536],
+  "Calvados":[49.1826,-0.3706],"Finistère":[48.2332,-4.2082],
+  "Manche":[49.1091,-1.2966],"Ille-et-Vilaine":[48.1173,-1.6778],"Rennes":[48.1173,-1.6778],
+  "Strasbourg":[48.5734,7.7521],"Clermont-Ferrand":[45.7772,3.0870],
+  "Nice":[43.7102,7.2620],"Montpellier":[43.6119,3.8772],"Grenoble":[45.1885,5.7245],
+  "Dijon":[47.3220,5.0415],"Rennes":[48.1117,-1.6806],
+  "Hauts-de-Seine":[48.8588,2.2152],"Val-d'Oise":[49.0757,2.2196],"Essonne":[48.5453,2.3122],
+  "DOM TOM":[14.6415,-61.0242],"DOM-TOM":[14.6415,-61.0242],
+  "Guadeloupe":[16.2650,-61.5510],"Martinique":[14.6415,-61.0242],
+  "Réunion":[-21.1151,55.5364],"Guyane":[3.9339,-53.1258],
+  "Sans Code_Postal":[47.00,2.00],"Sans Code Postal":[47.00,2.00],
+  /* ── Côte d'Ivoire — districts et régions officiels ── */
+  "Abidjan":[5.3600,-4.0083],"Lagunes":[5.3600,-4.0083],
+  "Bouaké":[7.6895,-5.0298],"Vallée du Bandama":[7.5500,-5.4500],
+  "Yamoussoukro":[6.8276,-5.2893],"Lacs":[6.8276,-5.2893],
+  "San-Pédro":[4.7483,-6.6363],"Bas-Sassandra":[5.0000,-6.5000],
+  "Korhogo":[9.4580,-5.6291],"Savanes":[9.5000,-5.5000],
+  "Man":[7.4120,-7.5533],"Montagnes":[7.4120,-7.5533],
+  "Daloa":[6.8747,-6.4501],"Haut-Sassandra":[6.8000,-6.2000],
+  "Gagnoa":[6.1319,-5.9508],"Fromager":[6.1319,-5.9508],
+  "Divo":[5.8372,-5.3581],"Sud-Bandama":[5.5000,-5.2000],
+  "Abengourou":[6.7277,-3.4963],"Moyen-Comoé":[6.7277,-3.4963],
+  "Bondoukou":[8.0392,-2.8005],"Zanzan":[8.0392,-2.8005],
+  "Soubré":[5.7868,-6.5951],"Sud-Comoé":[5.3402,-3.5447],
+  "Sassandra":[4.9508,-6.0868],"Agboville":[5.9252,-4.2189],
+  "Grand-Bassam":[5.1999,-3.7353],"Abobo":[5.4135,-4.0150],
+  "Anyama":[5.5000,-4.0500],"Yopougon":[5.3560,-4.0734],
+  "Cocody":[5.3594,-3.9738],"Bingerville":[5.3594,-3.8900],
+  "Nord":[9.5000,-5.5000],"Sud":[5.0000,-5.0000],
+  "Est":[7.0000,-3.0000],"Ouest":[7.0000,-7.0000],
+  /* ── Sénégal — régions officielles (centroïdes) ── */
+  "Dakar":[14.6928,-17.4467],"Thiès":[14.7886,-16.9332],
+  "Saint-Louis":[15.9000,-14.5000],"Ziguinchor":[12.5604,-16.2719],
+  "Kaolack":[14.1652,-16.0726],"Touba":[14.8500,-15.8833],
+  "Diourbel":[14.6500,-16.3000],"Fatick":[14.3392,-16.4113],
+  "Tambacounda":[13.7709,-13.6673],"Kédougou":[12.5559,-12.1847],
+  "Kolda":[12.8985,-14.9414],"Sédhiou":[12.7081,-15.5569],
+  "Matam":[15.6594,-13.2557],"Louga":[15.6194,-16.2249],
+  "Kaffrine":[14.1059,-15.5503],"Podor":[16.6500,-14.9667],
+  /* ── Maroc — régions officielles ── */
+  "Casablanca-Settat":[33.3906,-7.5898],"Casablanca":[33.5731,-7.5898],
+  "Rabat-Salé-Kénitra":[34.1553,-6.7735],"Rabat":[34.0209,-6.8416],
+  "Marrakech-Safi":[31.6295,-8.0089],"Marrakech":[31.6295,-7.9811],
+  "Fès-Meknès":[34.0333,-4.9998],"Fès":[34.0333,-5.0000],
+  "Tanger-Tétouan-Al Hoceïma":[35.5893,-5.3626],"Tanger":[35.7671,-5.7998],
+  "Souss-Massa":[30.4278,-9.5981],"Agadir":[30.4278,-9.5981],
+  "Béni Mellal-Khénifra":[32.3373,-6.3498],"Oujda":[34.6813,-1.9086],
+  /* ── Cameroun — régions officielles ── */
+  "Centre":[4.7500,11.5167],"Littoral":[3.8667,10.9167],
+  "Nord":[9.3000,13.4000],"Extrême-Nord":[11.5000,14.5000],
+  "Adamaoua":[7.3333,13.5833],"Est":[4.0000,14.0000],
+  "Sud":[3.0000,12.0000],"Ouest":[5.4667,10.4167],
+  "Sud-Ouest":[4.5000,9.2500],"Nord-Ouest":[6.0000,10.1667],
+  "Yaoundé":[3.8667,11.5167],"Douala":[4.0500,9.7000],
+  "Garoua":[9.3000,13.4000],"Maroua":[10.5908,14.3158],
+  "Bamenda":[5.9667,10.1667],"Bafoussam":[5.4667,10.4167],
+  /* ── Algérie — wilayas principales ── */
+  "Alger":[36.7369,3.0869],"Oran":[35.6969,-0.6331],
+  "Constantine":[36.3650,6.6147],"Annaba":[36.9000,7.7667],
+  "Béjaïa":[36.7552,5.0844],"Tlemcen":[34.8828,-1.3147],
+  "Sétif":[36.1898,5.4106],"Batna":[35.5558,6.1742],
+  /* ── Tunisie ── */
+  "Tunis":[36.8190,10.1658],"Sfax":[34.7406,10.7603],
+  "Sousse":[35.8333,10.6333],"Bizerte":[37.2744,9.8739],
+  "Kairouan":[35.6781,10.0931],"Nabeul":[36.4561,10.7376],
+  /* ── Belgique ── */
+  "Bruxelles":[50.8503,4.3517],"Anvers":[51.2213,4.4051],
+  "Gand":[51.0543,3.7174],"Liège":[50.6326,5.5797],"Bruges":[51.2093,3.2247],
+  /* ── Portugal ── */
+  "Lisbonne":[38.7223,-9.1393],"Porto":[41.1579,-8.6291],
+  "Braga":[41.5518,-8.4229],"Setúbal":[38.5244,-8.8882],
+  "Castelo Branco":[39.8224,-7.4924],"Vieira de Minho":[41.6333,-8.1333],
+  /* ── Autres pays africains ── */
+  "Abidjan Nord":[5.4000,-4.0000],"Abidjan Sud":[5.3000,-4.0000],
+  "Grand Abidjan":[5.3600,-4.0083],"District d'Abidjan":[5.3600,-4.0083],
+};
+
+// Auto-resolve coordinates: stored → exact match → normalized match → partial match
+function resolveCoords(region, projId) {
+  const stored = (APP.regionCoords[projId]||{})[region];
+  if (stored && !isNaN(stored[0])) return stored;
+  // Exact key match
+  if (REGION_DEFAULTS[region] !== undefined) return REGION_DEFAULTS[region];
+  // Normalize: strip accents, lowercase, collapse spaces
+  const norm = s => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');
+  const rNorm = norm(region);
+  const keys = Object.keys(REGION_DEFAULTS);
+  // 1. Exact normalized match
+  let match = keys.find(k => norm(k) === rNorm);
+  if (match && REGION_DEFAULTS[match]) return REGION_DEFAULTS[match];
+  // 2. Partial: region name contains key or key contains region name (min 5 chars)
+  if (rNorm.length >= 5) {
+    match = keys.find(k => norm(k).length >= 5 && (norm(k).includes(rNorm) || rNorm.includes(norm(k))));
+    if (match && REGION_DEFAULTS[match]) return REGION_DEFAULTS[match];
+  }
+  return null;
+}
+
+// Deterministic pseudo-random offset for unknown regions
+function regionOffset(region, idx, total, centerLat, centerLng) {
+  const angle = (idx / Math.max(total,1)) * 2 * Math.PI;
+  const spread = Math.min(2.5, 0.5 + total * 0.2);
+  return [centerLat + Math.sin(angle) * spread, centerLng + Math.cos(angle) * spread];
+}
+
+const COUNTRIES = [
+  {n:"Bénin",id:204,lat:9.3,lng:2.3},{n:"Burkina Faso",id:854,lat:12.3,lng:-1.6},
+  {n:"Cameroun",id:120,lat:3.8,lng:11.5},{n:"Canada",id:124,lat:56,lng:-96},
+  {n:"Congo",id:178,lat:-0.2,lng:15.8},{n:"Côte d'Ivoire",id:384,lat:7.5,lng:-5.5},
+  {n:"RDC",id:180,lat:-4,lng:21.7},{n:"France",id:250,lat:46.2,lng:2.2},
+  {n:"Gabon",id:266,lat:-0.8,lng:11.6},{n:"Guinée",id:324,lat:11,lng:-10.9},
+  {n:"Madagascar",id:450,lat:-20,lng:46.9},{n:"Mali",id:466,lat:17,lng:-4},
+  {n:"Maroc",id:504,lat:31.8,lng:-7.1},{n:"Mauritanie",id:478,lat:20.3,lng:-10.9},
+  {n:"Niger",id:562,lat:17.6,lng:8.1},{n:"Sénégal",id:686,lat:14.5,lng:-14.5},
+  {n:"Togo",id:768,lat:8.6,lng:0.8},{n:"Tunisie",id:788,lat:33.9,lng:9.5},
+  {n:"Algérie",id:12,lat:28.0,lng:2.6},{n:"Égypte",id:818,lat:26,lng:30},
+  {n:"Ghana",id:288,lat:7.9,lng:-1.0},{n:"Nigeria",id:566,lat:9.1,lng:8.7},
+  {n:"Espagne",id:724,lat:40.4,lng:-3.7},{n:"Portugal",id:620,lat:39.4,lng:-8.2},
+  {n:"Belgique",id:56,lat:50.5,lng:4.5},{n:"Suisse",id:756,lat:46.8,lng:8.2},
+  {n:"États-Unis",id:840,lat:37.1,lng:-95.7},{n:"Brésil",id:76,lat:-14.2,lng:-51.9},
+  {n:"Mexique",id:484,lat:23.6,lng:-102.5},{n:"Inde",id:356,lat:20.6,lng:78.9},
+  {n:"Chine",id:156,lat:35.9,lng:104.2},{n:"Royaume-Uni",id:826,lat:55.4,lng:-3.4},
+  {n:"Allemagne",id:276,lat:51.2,lng:10.5},{n:"Italie",id:380,lat:41.9,lng:12.6},
+  {n:"Pays-Bas",id:528,lat:52.1,lng:5.3},{n:"Suède",id:752,lat:60.1,lng:18.6},
+];
+COUNTRIES.sort((a,b)=>a.n.localeCompare(b.n));
+
+/* ─── STORE ─── */
+let APP = {
+  projects:[],       // [{id,name,pays,paysId,paysLat,paysLng,color,desc,objectives:{}}]
+  records:[],        // [{id,importSession,Date_appel,Régions,Stats_StatusText,Occurence_Prod,Occurence_Livraison,Année,Mois,Semaine,Contact_Argumente,F_C,Accords,Projet}]
+  regionCoords:{},   // {projId: {region:[lat,lng]}}
+  objectives:{},     // {projId:{prod,livr,acc,rat,ca,seuil}}
+  importSessions:[], // [{id,label,count,ts,detected}]
+  trace:[],          // [{ts,action,detail}]
+  activeProject:null,
+  filters:{region:'all',annee:'all',mois:'all',sem:'all',statut:'all',join:'all'},
+  theme:'dark',
+};
+
+function persist(){
+  try{localStorage.setItem(SK,JSON.stringify(APP));APP.trace[0] && (APP.trace[0].ts=new Date().toLocaleString('fr'));}catch(e){}
+}
+function hydrate(){
+  try{const s=localStorage.getItem(SK);if(s)APP=Object.assign(APP,JSON.parse(s));}catch(e){}
+}
+
+/* ─── TRACE ─── */
+function addTrace(action,detail){
+  APP.trace.unshift({ts:new Date().toLocaleString('fr'),action,detail});
+  if(APP.trace.length>200)APP.trace.pop();
+  persist();
+}
+
+/* ─── THEME ─── */
+function toggleTheme(){
+  const t=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
+  document.documentElement.setAttribute('data-theme',t);
+  APP.theme=t;persist();
+  setTimeout(rebuildCharts,80);
+  setTimeout(()=>{ if(typeof updateMapTheme==='function') updateMapTheme(); }, 120);
+}
+
+/* ─── TABS ─── */
+function goTab(id,el){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.ntab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('panel-'+id).classList.add('active');
+  el.classList.add('active');
+  if(id==='saisie'){renderTable();populateFormProjects();renderImportSessions();}
+  if(id==='projets'){renderProjList();}
+  if(id==='params'){renderParamsSelects();renderStats();}
+  if(id==='dashboard'){renderDashboard();setTimeout(()=>{if(typeof L!=='undefined'&&leafMap)leafMap.invalidateSize();},200);}
+}
+
+/* ─── PROJECT SELECT ─── */
+function populateCountrySelect(){
+  const s=document.getElementById('p-pays');
+  s.innerHTML='<option value="">Sélectionner un pays...</option>';
+  COUNTRIES.forEach(c=>s.innerHTML+=`<option value="${c.id}" data-lat="${c.lat}" data-lng="${c.lng}">${c.n}</option>`);
+}
+function selectProjColor(el){
+  document.querySelectorAll('.color-opt').forEach(e=>e.style.borderColor='transparent');
+  el.style.borderColor='#fff';
+  document.getElementById('p-color').value=el.getAttribute('data-c');
+}
+
+/* ─── CREATE PROJECT ─── */
+function createProject(){
+  const nm=document.getElementById('p-nom').value.trim();
+  const pays=document.getElementById('p-pays');
+  const paysId=parseInt(pays.value);
+  const paysOpt=pays.options[pays.selectedIndex];
+  const desc=document.getElementById('p-desc').value.trim();
+  const color=document.getElementById('p-color').value||'#00c8ff';
+  const objLivr=parseInt(document.getElementById('p-objLivr').value)||0;
+  const objRat=parseInt(document.getElementById('p-objRat').value)||50;
+  if(!nm){showAlert('alert-proj','Nom du projet requis.','e');return;}
+  if(!paysId){showAlert('alert-proj','Veuillez sélectionner un pays.','e');return;}
+  const lat=parseFloat(paysOpt.getAttribute('data-lat'));
+  const lng=parseFloat(paysOpt.getAttribute('data-lng'));
+  const paysNom=paysOpt.text;
+  const id='proj_'+Date.now();
+  APP.projects.push({id,name:nm,pays:paysNom,paysId,paysLat:lat,paysLng:lng,color,desc,createdAt:new Date().toLocaleDateString('fr')});
+  APP.objectives[id]={prod:0,livr:objLivr,acc:0,rat:objRat,ca:0,seuil:70};
+  APP.regionCoords[id]={};
+  persist();
+  addTrace('Création projet',nm);
+  showAlert('alert-proj',`Projet "${nm}" créé avec succès !`,'s');
+  ['p-nom','p-desc','p-objLivr','p-objRat'].forEach(i=>document.getElementById(i).value='');
+  renderProjList();
+  populateProjectSwitcher();
+  populateFormProjects();
+}
+
+/* ─── RENDER PROJ LIST ─── */
+function renderProjList(){
+  const wrap=document.getElementById('projList');
+  const empty=document.getElementById('emptyProj');
+  if(!APP.projects.length){wrap.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  wrap.innerHTML=APP.projects.map(p=>{
+    const recs=APP.records.filter(r=>r.Projet===p.id);
+    const livr=recs.reduce((s,r)=>s+(+r.Occurence_Livraison||0),0);
+    const acc=recs.reduce((s,r)=>s+(+r.Accords||0),0);
+    const ca=recs.reduce((s,r)=>s+(+r.Contact_Argumente||0),0);
+    const isActive=APP.activeProject===p.id;
+    return `<div class="proj-card ${isActive?'active-proj':''}" onclick="switchProject('${p.id}')">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+        <div style="width:10px;height:10px;border-radius:50%;background:${p.color};flex-shrink:0"></div>
+        <div class="proj-name">${p.name}</div>
+      </div>
+      <div class="proj-meta">🌍 ${p.pays} · ${p.desc||'Aucune description'} · Créé le ${p.createdAt}</div>
+      <div class="proj-kpis">
+        <div class="proj-kpi-item"><div class="proj-kpi-v" style="color:${p.color}">${recs.length}</div><div class="proj-kpi-l">Entrées</div></div>
+        <div class="proj-kpi-item"><div class="proj-kpi-v" style="color:var(--re)">${livr.toLocaleString('fr')}</div><div class="proj-kpi-l">Livraisons</div></div>
+        <div class="proj-kpi-item"><div class="proj-kpi-v" style="color:var(--gr)">${acc.toLocaleString('fr')}</div><div class="proj-kpi-l">Accords</div></div>
+        <div class="proj-kpi-item"><div class="proj-kpi-v" style="color:var(--ye)">${ca.toLocaleString('fr')}</div><div class="proj-kpi-l">Cont.Arg</div></div>
+      </div>
+      <div style="margin-top:10px;display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn-sec" style="font-size:10px;padding:4px 10px" onclick="event.stopPropagation();activateProject('${p.id}')">✅ Activer</button>
+        <button class="btn-danger" onclick="event.stopPropagation();deleteProject('${p.id}')">🗑 Supprimer</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function deleteProject(id){
+  if(!confirm('Supprimer ce projet et toutes ses données ?')) return;
+  const proj=APP.projects.find(p=>p.id===id);
+  APP.projects=APP.projects.filter(p=>p.id!==id);
+  APP.records=APP.records.filter(r=>r.Projet!==id);
+  delete APP.regionCoords[id]; delete APP.objectives[id];
+  if(APP.activeProject===id) APP.activeProject=APP.projects[0]?.id||null;
+  persist();
+  addTrace('Suppression projet',proj?.name||id);
+  renderProjList(); populateProjectSwitcher(); renderDashboard();
+}
+
+/* ─── SWITCH PROJECT ─── */
+function switchProject(id){
+  APP.activeProject=id||null;
+  persist();
+  const sel=document.getElementById('projSwitch');
+  sel.value=id||'';
+  const p=APP.projects.find(proj=>proj.id===id);
+  const badge=document.getElementById('projBadge');
+  if(p){
+    badge.textContent=p.pays;
+    badge.style.display='inline';
+    badge.style.background=p.color+'22';
+    badge.style.color=p.color;
+    badge.style.border=`1px solid ${p.color}44`;
+  } else {
+    badge.style.display='none';
+  }
+  resetFilters();
+  renderDashboard();
+  renderProjList();
+  // Zoom map to the selected project's country immediately
+  if(typeof L!=='undefined' && leafMap && p){
+    setTimeout(()=>{
+      const zoom = p.paysId===384?7:p.paysId===250?6:p.paysId===686?6:5;
+      leafMap.flyTo([p.paysLat, p.paysLng], zoom, {duration:1.2});
+      setTimeout(()=>renderMap(), 400);
+    }, 100);
+  }
+}
+
+function activateProject(id){switchProject(id);}
+
+function populateProjectSwitcher(){
+  const sel=document.getElementById('projSwitch');
+  sel.innerHTML='<option value="">— Tous les projets —</option>';
+  APP.projects.forEach(p=>sel.innerHTML+=`<option value="${p.id}">${p.name} (${p.pays})</option>`);
+  if(APP.activeProject) sel.value=APP.activeProject;
+}
+
+function populateFormProjects(){
+  const sel=document.getElementById('f-projet');
+  sel.innerHTML='<option value="">Sélectionner...</option>';
+  APP.projects.forEach(p=>sel.innerHTML+=`<option value="${p.id}">${p.name}</option>`);
+  if(APP.activeProject) sel.value=APP.activeProject;
+}
+
+/* ─── COMPUTED DATA ─── */
+function filtered(){
+  return APP.records.filter(r=>{
+    if(APP.activeProject && r.Projet!==APP.activeProject) return false;
+    const f=APP.filters;
+    if(f.region!=='all' && r.Régions!==f.region) return false;
+    if(f.annee!=='all' && String(r.Année)!==f.annee) return false;
+    if(f.mois!=='all' && String(r.Mois)!==f.mois) return false;
+    if(f.sem!=='all' && String(r.Semaine)!==f.sem) return false;
+    if(f.statut!=='all' && r.Stats_StatusText!==f.statut) return false;
+    // Joignabilité filter: per record, livr/prod ratio
+    if(f.join && f.join!=='all'){
+      const prod=+r.Occurence_Prod||0;
+      const livr=+r.Occurence_Livraison||0;
+      const pct=prod>0?livr/prod*100:0;
+      if(f.join==='high' && pct<70) return false;
+      if(f.join==='mid' && (pct<40||pct>=70)) return false;
+      if(f.join==='low' && pct>=40) return false;
+    }
+    return true;
+  });
+}
+
+function kpis(recs){
+  const prod=recs.reduce((s,r)=>s+(+r.Occurence_Prod||0),0);
+  const livr=recs.reduce((s,r)=>s+(+r.Occurence_Livraison||0),0);
+  const acc=recs.reduce((s,r)=>s+(+r.Accords||0),0);
+  const ca=recs.reduce((s,r)=>s+(+r.Contact_Argumente||0),0);
+  const fc=recs.reduce((s,r)=>s+(+r.F_C||0),0);
+  const eff=prod>0?Math.round(livr/prod*100):0;
+  const rat=livr>0?Math.round(acc/livr*100):0;
+  const fcr=prod>0?Math.round(fc/prod*100):0;
+  const car=prod>0?Math.round(ca/prod*100):0;
+  const ftr=livr>0?Math.round(ca/livr*100):0;
+  const join=eff;
+  return{prod,livr,acc,ca,fc,eff,rat,fcr,car,ftr,join};
+}
+
+
+function byRegion(recs,field){
+  const m={};
+  recs.forEach(r=>{const k=r.Régions||'N/A';m[k]=(m[k]||0)+(+r[field]||0);});
+  return Object.entries(m).sort((a,b)=>b[1]-a[1]);
+}
+
+function fmtCA(v){if(v>=1000000)return(v/1000000).toFixed(1)+'M';if(v>=1000)return(v/1000).toFixed(0)+'K';return v.toString();}
+
+/* ─── FILTERS ─── */
+function populateFilterDropdowns(recs){
+  const all=APP.records;
+  const regions=[...new Set(all.filter(r=>APP.activeProject?r.Projet===APP.activeProject:true).map(r=>r.Régions).filter(Boolean))].sort();
+  const annees=[...new Set(all.filter(r=>APP.activeProject?r.Projet===APP.activeProject:true).map(r=>r.Année).filter(Boolean))].sort();
+  const sems=[...new Set(all.filter(r=>APP.activeProject?r.Projet===APP.activeProject:true).map(r=>r.Semaine).filter(Boolean))].sort((a,b)=>a-b);
+  const statuts=[...new Set(all.filter(r=>APP.activeProject?r.Projet===APP.activeProject:true).map(r=>r.Stats_StatusText).filter(Boolean))].sort();
+
+  function upd(id,vals,cur){
+    const s=document.getElementById(id);
+    const cv=cur||s.value;
+    s.innerHTML='<option value="all">Tous</option>';
+    vals.forEach(v=>s.innerHTML+=`<option value="${v}" ${cv===String(v)?'selected':''}>${v}</option>`);
+    if(cv!=='all' && !vals.includes(cv) && !vals.map(String).includes(cv)) s.value='all';
+  }
+  upd('fRegion',regions,APP.filters.region);
+  upd('fAnnee',annees,APP.filters.annee);
+  upd('fSem',sems,APP.filters.sem);
+  upd('fStatut',statuts,APP.filters.statut);
+}
+
+function applyFilters(){
+  APP.filters.region=document.getElementById('fRegion').value;
+  APP.filters.annee=document.getElementById('fAnnee').value;
+  APP.filters.mois=document.getElementById('fMois').value;
+  APP.filters.sem=document.getElementById('fSem').value;
+  APP.filters.statut=document.getElementById('fStatut').value;
+  APP.filters.join=document.getElementById('fJoin')?.value||'all';
+  renderDashboard();
+}
+
+function resetFilters(){
+  APP.filters={region:'all',annee:'all',mois:'all',sem:'all',statut:'all',join:'all'};
+  ['fRegion','fAnnee','fMois','fSem','fStatut','fJoin'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='all';});
+  renderDashboard();
+}
+
+/* ─── RENDER DASHBOARD ─── */
+function renderDashboard(){
+  const recs=filtered();
+  const k=kpis(recs);
+  populateFilterDropdowns(recs);
+
+  // Header KPIs
+  document.getElementById('hProd').textContent=k.prod.toLocaleString('fr');
+  document.getElementById('hLivr').textContent=k.livr.toLocaleString('fr');
+  document.getElementById('hAcc').textContent=k.acc.toLocaleString('fr');
+  document.getElementById('hCA').textContent=k.ca.toLocaleString('fr');
+
+  // KPI Cards
+  document.getElementById('kProd').textContent=k.prod.toLocaleString('fr');
+  document.getElementById('kLivr').textContent=k.livr.toLocaleString('fr');
+  document.getElementById('kAcc').textContent=k.acc.toLocaleString('fr');
+  document.getElementById('kCA').textContent=k.ca.toLocaleString('fr');
+  document.getElementById('kFC').textContent=k.fc.toLocaleString('fr');
+
+  // Filter count
+  document.getElementById('fCount').textContent=recs.length;
+
+  // Gauges row 1
+  setGauge('gEff','gEffTxt',k.eff,'var(--c)');
+  setGauge('gRat','gRatTxt',k.rat,'var(--gr)');
+  setGauge('gFC','gFCTxt',k.fcr,'var(--ye)');
+  // Gauges row 2
+  setGauge('gCA','gCATxt',k.car,'var(--ye)');
+  setGauge('gFT','gFTTxt',k.ftr,'var(--pk)');
+  setGauge('gJoin','gJoinTxt',k.join,'var(--pu)');
+
+  // Gauge bars by region
+  renderGaugeBars('effBars',byRegion(recs,'Occurence_Livraison').slice(0,4),'var(--c)');
+  renderGaugeBars('ratBars',byRegion(recs,'Accords').slice(0,4),'var(--gr)');
+  renderGaugeBars('fcBars',byRegion(recs,'F_C').slice(0,4),'var(--ye)');
+  renderGaugeBars('caBars',byRegion(recs,'Contact_Argumente').slice(0,4),'var(--ye)');
+  renderGaugeBars('ftBars',byRegion(recs,'Contact_Argumente').slice(0,4),'var(--pk)');
+  renderGaugeBars('joinBars',byRegion(recs,'Occurence_Livraison').slice(0,4),'var(--pu)');
+
+  // Geo lists
+  renderGeoList('geoLivr',byRegion(recs,'Occurence_Livraison'),'var(--re)');
+  renderJoinList('geoJoin',recs);
+
+  // Charts
+  rebuildCharts(recs);
+  renderJoinTable(recs);
+
+  // Map
+  if(typeof L!=="undefined"&&leafMap) renderMap(recs); else if(typeof L!=="undefined") setTimeout(()=>renderMap(recs),300);
+}
+
+function setGauge(circId,txtId,pct,color){
+  const circ=document.getElementById(circId);
+  const txt=document.getElementById(txtId);
+  const r=32; const c=2*Math.PI*r;
+  const off=c-(pct/100)*c;
+  circ.setAttribute('stroke-dashoffset',Math.max(0,off).toFixed(2));
+  circ.setAttribute('stroke',getComputedStyle(document.documentElement).getPropertyValue(color.replace('var(','').replace(')',''))||color);
+  txt.textContent=pct+'%';
+}
+
+function renderGaugeBars(id,data,color){
+  const wrap=document.getElementById(id);if(!wrap)return;
+  if(!data.length){wrap.innerHTML='<div style="font-size:10px;color:var(--tx3)">Aucune donnée</div>';return;}
+  const max=data[0]?.[1]||1;
+  wrap.innerHTML=data.map(([name,val])=>`
+    <div class="pbar-row">
+      <div class="pbar-label" title="${name}">${name}</div>
+      <div class="pbar-track"><div class="pbar-fill" style="width:${Math.round(val/max*100)}%;background:${color}"></div></div>
+      <div class="pbar-val" style="color:${color}">${val.toLocaleString('fr')}</div>
+    </div>`).join('');
+}
+
+function renderGeoList(id,data,color){
+  const wrap=document.getElementById(id);if(!wrap)return;
+  if(!data.length){wrap.innerHTML='<div class="empty"><div class="ico">📭</div><p>Aucune donnée</p></div>';return;}
+  const max=data[0]?.[1]||1;
+  wrap.innerHTML=data.slice(0,10).map(([name,val])=>`
+    <div class="geo-item">
+      <div class="geo-dot" style="background:${color};box-shadow:0 0 5px ${color}"></div>
+      <div class="geo-name" title="${name}">${name}</div>
+      <div class="geo-val" style="color:${color}">${val.toLocaleString('fr')}</div>
+    </div>`).join('');
+}
+
+/* ─── JOIN LIST & TABLE ─── */
+function renderJoinList(id,recs){
+  const wrap=document.getElementById(id);if(!wrap)return;
+  const regions=[...new Set(recs.map(r=>r.Régions).filter(Boolean))];
+  if(!regions.length){wrap.innerHTML='<div class="empty"><div class="ico">📭</div><p>Aucune donnée</p></div>';return;}
+  const data=regions.map(r=>{
+    const rr=recs.filter(x=>x.Régions===r);
+    const prod=rr.reduce((s,x)=>s+(+x.Occurence_Prod||0),0);
+    const livr=rr.reduce((s,x)=>s+(+x.Occurence_Livraison||0),0);
+    const pct=prod>0?Math.round(livr/prod*100):0;
+    return[r,pct];
+  }).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const max=data[0]?.[1]||1;
+  wrap.innerHTML=data.map(([name,val])=>`
+    <div class="geo-item">
+      <div class="geo-dot" style="background:var(--pu);box-shadow:0 0 5px var(--pu)"></div>
+      <div class="geo-name" title="${name}">${name}</div>
+      <div class="geo-val" style="color:var(--pu)">${val}%</div>
+    </div>`).join('');
+}
+
+function renderJoinTable(recs){
+  const tbody=document.getElementById('joinTableBody');
+  const empty=document.getElementById('joinTableEmpty');
+  if(!tbody)return;
+  const regions=[...new Set(recs.map(r=>r.Régions).filter(Boolean))];
+  if(!regions.length){if(empty)empty.style.display='block';tbody.innerHTML='';return;}
+  if(empty)empty.style.display='none';
+  const rows=regions.map(r=>{
+    const rr=recs.filter(x=>x.Régions===r);
+    const prod=rr.reduce((s,x)=>s+(+x.Occurence_Prod||0),0);
+    const livr=rr.reduce((s,x)=>s+(+x.Occurence_Livraison||0),0);
+    const acc=rr.reduce((s,x)=>s+(+x.Accords||0),0);
+    const ca=rr.reduce((s,x)=>s+(+x.Contact_Argumente||0),0);
+    const fc=rr.reduce((s,x)=>s+(+x.F_C||0),0);
+    const join=prod>0?Math.round(livr/prod*100):0;
+    const rat=livr>0?Math.round(acc/livr*100):0;
+    const txArg=prod>0?Math.round(ca/prod*100):0;
+    const txFC=prod>0?Math.round(fc/prod*100):0;
+    const txFT=livr>0?Math.round(ca/livr*100):0;
+    return{r,prod,livr,acc,ca,fc,join,rat,txArg,txFC,txFT};
+  }).sort((a,b)=>b.join-a.join);
+  tbody.innerHTML=rows.map((x,i)=>{
+    const jc=x.join>=70?'var(--gr)':x.join>=40?'var(--ye)':'var(--re)';
+    const rc=x.rat>=50?'var(--gr)':x.rat>=30?'var(--ye)':'var(--re)';
+    return`<tr>
+      <td style="color:var(--tx3)">${i+1}</td>
+      <td style="color:var(--tx);font-weight:600">${x.r}</td>
+      <td style="color:var(--c)">${x.prod.toLocaleString('fr')}</td>
+      <td style="color:var(--re)">${x.livr.toLocaleString('fr')}</td>
+      <td><span class="badge" style="background:${jc}22;color:${jc}">${x.join}%</span></td>
+      <td style="color:var(--gr)">${x.acc.toLocaleString('fr')}</td>
+      <td><span class="badge" style="background:${rc}22;color:${rc}">${x.rat}%</span></td>
+      <td style="color:var(--ye)">${x.ca.toLocaleString('fr')}</td>
+      <td style="color:var(--ye)">${x.txArg}%</td>
+      <td style="color:var(--pk)">${x.fc.toLocaleString('fr')}</td>
+      <td style="color:var(--pk)">${x.txFC}%</td>
+      <td style="color:var(--c)">${x.txFT}%</td>
+    </tr>`;
+  }).join('');
+}
+
+/* ─── WORLD MAP — LEAFLET ─── */
+let leafMap = null;
+let leafLayers = [];
+let allMapMarkers = []; // {layer, country, region}
+
+function onLeafletLoaded() {
+  setTimeout(initMap, 50);
+}
+function onLeafletError() {
+  const el = document.getElementById('world-map');
+  if (el) el.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--tx3);font-size:12px;flex-direction:column;gap:8px"><div style="font-size:32px">🌍</div><div>Carte indisponible — vérifiez votre connexion</div></div>';
+}
+
+let currentTileLayer = null;
+
+function getTileUrl(dark) {
+  return dark
+    ? 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png'
+    : 'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png';
+}
+
+function initMap() {
+  if (leafMap) return;
+  if (typeof L === 'undefined') { setTimeout(initMap, 300); return; }
+  const isDk = document.documentElement.getAttribute('data-theme') === 'dark';
+
+  leafMap = L.map('world-map', {
+    center: [46.5, 2.5],
+    zoom: 5,
+    zoomControl: true,
+    attributionControl: true,
+    preferCanvas: false,
+  });
+
+  currentTileLayer = L.tileLayer(getTileUrl(isDk), {
+    attribution: '© OpenStreetMap © CARTO',
+    subdomains: 'abcd',
+    maxZoom: 19,
+  }).addTo(leafMap);
+
+  renderMap();
+}
+
+function updateMapTheme() {
+  if (!leafMap || !currentTileLayer) return;
+  const isDk = document.documentElement.getAttribute('data-theme') === 'dark';
+  leafMap.removeLayer(currentTileLayer);
+  currentTileLayer = L.tileLayer(getTileUrl(isDk), {
+    attribution: '© OpenStreetMap © CARTO',
+    subdomains: 'abcd',
+    maxZoom: 19,
+  }).addTo(leafMap);
+  renderMap();
+}
+
+function clearMapLayers() {
+  leafLayers.forEach(l => { try { leafMap.removeLayer(l); } catch(e){} });
+  leafLayers = [];
+  allMapMarkers = [];
+}
+
+function buildPopup(region, livr, acc, prod, ca, fc, projColor) {
+  const eff = prod > 0 ? Math.round(livr / prod * 100) : 0;
+  const rat = livr > 0 ? Math.round(acc / livr * 100) : 0;
+  return `<div style="min-width:200px">
+    <div class="pop-region" style="color:${projColor}">${region}</div>
+    <div class="pop-row"><span class="pop-lbl">Production</span><span class="pop-val" style="color:#00c8ff">${prod.toLocaleString('fr')}</span></div>
+    <div class="pop-row"><span class="pop-lbl">Livraisons</span><span class="pop-val" style="color:#ff3d5a">${livr.toLocaleString('fr')}</span></div>
+    <div class="pop-row"><span class="pop-lbl">Accords</span><span class="pop-val" style="color:#00e676">${acc.toLocaleString('fr')}</span></div>
+    <div class="pop-row"><span class="pop-lbl">Cont. Arg.</span><span class="pop-val" style="color:#ffc107">${ca.toLocaleString('fr')}</span></div>
+    <div class="pop-row"><span class="pop-lbl">F.C</span><span class="pop-val" style="color:#ff4da6">${fc.toLocaleString('fr')}</span></div>
+    <div class="pop-row"><span class="pop-lbl">Joignabilité (L/P)</span><span class="pop-val" style="color:${eff>=70?'#00e676':eff>=50?'#ffc107':'#ff3d5a'}">${eff}%</span></div>
+    <div class="pop-row"><span class="pop-lbl">Ratio (A/L)</span><span class="pop-val" style="color:${rat>=50?'#00e676':rat>=30?'#ffc107':'#ff3d5a'}">${rat}%</span></div>
+    <div class="pop-row"><span class="pop-lbl">Tx Fiche Traitée</span><span class="pop-val" style="color:#ffc107">${livr>0?Math.round(ca/livr*100):0}%</span></div>
+    <div class="pop-row"><span class="pop-lbl">Tx Fiche Close</span><span class="pop-val" style="color:#ff4da6">${prod>0?Math.round(fc/prod*100):0}%</span></div>
+  </div>`;
+}
+
+function fmtNum(v) {
+  if (v >= 1000000) return (v/1000000).toFixed(1)+'M';
+  if (v >= 1000)    return Math.round(v/1000)+'K';
+  return String(Math.round(v));
+}
+/* ── Crée un marker texte centré EXACTEMENT sur [lat,lng] ──
+   L.divIcon avec iconSize=[w,h] et iconAnchor=[w/2,h/2]
+   ancre le CENTRE du div sur la coordonnée.
+   Pas de transform CSS → pas de décalage selon zoom. */
+function numSize(v,m){const r=m>0?v/m:0;return r>0.6?"lg":r>0.25?"md":"sm";}
+function makeLabel(html, w, h) {
+  return L.divIcon({
+    html: html,
+    className: '',
+    iconSize:   [w, h],
+    iconAnchor: [w/2, h/2],
+  });
+}
+
+function numLabel(value, color, isDark) {
+  const txt = fmtNum(value);
+  const w = Math.max(40, txt.length * 10 + 8);
+  const shadow = isDark
+    ? '0 0 3px #000,0 0 5px #000,0 0 8px rgba(0,0,0,0.9)'
+    : '1px 1px 0 #fff,-1px -1px 0 #fff,1px -1px 0 #fff,-1px 1px 0 #fff,0 0 6px rgba(255,255,255,0.95)';
+  const fs = value >= 100000 ? 14 : value >= 10000 ? 13 : 12;
+  return makeLabel(
+    '<div style="font-family:Rajdhani,Arial,sans-serif;font-size:' + fs + 'px;'
+    + 'font-weight:700;color:' + color + ';text-align:center;'
+    + 'white-space:nowrap;line-height:1;cursor:pointer;'
+    + 'text-shadow:' + shadow + '">' + txt + '</div>',
+    w, fs + 4
+  );
+}
+
+function regionLabel(name, isDark) {
+  const shadow = isDark
+    ? '0 0 3px #000,0 0 6px #000'
+    : '1px 1px 0 #fff,-1px -1px 0 #fff,1px -1px 0 #fff,-1px 1px 0 #fff';
+  const col = isDark ? 'rgba(220,230,255,0.85)' : 'rgba(30,30,50,0.80)';
+  const w = Math.max(60, name.length * 6 + 8);
+  return makeLabel(
+    '<div style="font-family:Rajdhani,Arial,sans-serif;font-size:9px;'
+    + 'font-weight:600;color:' + col + ';text-align:center;'
+    + 'white-space:nowrap;line-height:1;letter-spacing:.3px;'
+    + 'text-shadow:' + shadow + '">' + name + '</div>',
+    w, 12
+  );
+}
+
+function renderMap(recs) {
+  if (typeof L === 'undefined') { setTimeout(()=>renderMap(recs), 400); return; }
+  if (!leafMap) { initMap(); return; }
+  if (!recs) recs = filtered();
+
+  clearMapLayers();
+  const kpiType = document.getElementById('mapKPIType')?.value || 'both';
+
+  const proj      = APP.projects.find(p => p.id === APP.activeProject);
+  const centerLat = proj?.paysLat || 20;
+  const centerLng = proj?.paysLng || 10;
+  const activePids = APP.activeProject ? [APP.activeProject] : APP.projects.map(p => p.id);
+
+  const livrByReg = Object.fromEntries(byRegion(recs, 'Occurence_Livraison'));
+  const accByReg  = Object.fromEntries(byRegion(recs, 'Accords'));
+  const prodByReg = Object.fromEntries(byRegion(recs, 'Occurence_Prod'));
+  const caByReg   = Object.fromEntries(byRegion(recs, 'Contact_Argumente'));
+  const fcByReg   = Object.fromEntries(byRegion(recs, 'F_C'));
+
+  const allDataRegions = [...new Set(recs.map(r => r.Régions).filter(Boolean))];
+  const maxLivr = Math.max(1, ...Object.values(livrByReg));
+  const maxAcc  = Math.max(1, ...Object.values(accByReg));
+  const bounds  = [];
+
+  // Auto-save default coords
+  let changed = false;
+  activePids.forEach(pid => {
+    if (!APP.regionCoords[pid]) APP.regionCoords[pid] = {};
+    allDataRegions.forEach(region => {
+      if (!APP.regionCoords[pid][region] && REGION_DEFAULTS[region]) {
+        APP.regionCoords[pid][region] = REGION_DEFAULTS[region];
+        changed = true;
+      }
+    });
+  });
+  if (changed) persist();
+
+  // Unknown regions -> spread around country center
+  const unknownRegions = allDataRegions.filter(r => {
+    const pid = activePids[0] || '';
+    return !(APP.regionCoords[pid]||{})[r] && !REGION_DEFAULTS[r];
+  });
+
+  activePids.forEach(pid => {
+    const p    = APP.projects.find(x => x.id === pid);
+    const pLat = p?.paysLat || centerLat;
+    const pLng = p?.paysLng || centerLng;
+
+    const coordsForPid = Object.assign({}, APP.regionCoords[pid] || {});
+    unknownRegions.forEach((region, i) => {
+      if (!coordsForPid[region])
+        coordsForPid[region] = regionOffset(region, i, unknownRegions.length, pLat, pLng);
+    });
+
+    allDataRegions.forEach(region => {
+      const latLng = coordsForPid[region];
+      if (!latLng) return;
+      const lat = latLng[0], lng = latLng[1];
+      if (isNaN(lat) || isNaN(lng)) return;
+
+      const livr = livrByReg[region] || 0;
+      const acc  = accByReg[region]  || 0;
+      const prod = prodByReg[region] || 0;
+      const ca   = caByReg[region]   || 0;
+      const fc   = fcByReg[region]   || 0;
+      if (livr === 0 && acc === 0) return;
+
+      bounds.push([lat, lng]);
+      const popup = buildPopup(region, livr, acc, prod, ca, fc, p?.color || '#00c8ff');
+
+      const showLivr = (kpiType === 'both' || kpiType === 'livraison') && livr > 0;
+      const showAcc  = (kpiType === 'both' || kpiType === 'accords')   && acc  > 0;
+      const bothShown = showLivr && showAcc;
+
+      // ── Placement précis : iconSize=[w,h] iconAnchor=[w/2,h/2]
+      //    ancre le CENTRE EXACT du label sur [lat,lng]
+      const isDk = document.documentElement.getAttribute('data-theme')==='dark';
+
+      // Nom de région : centré horizontalement, décalé 14px au-dessus du chiffre livraison
+      const rgnW = Math.max(60, region.length * 6 + 8);
+      const rgnMk = L.marker([lat, lng], {
+        icon: regionLabel(region, isDk),
+        interactive: false,
+        zIndexOffset: 500,
+      });
+      rgnMk.addTo(leafMap);
+      leafLayers.push(rgnMk);
+      allMapMarkers.push({ layer:rgnMk, country:p?.pays||'', region, pid });
+
+      // ── LIVRAISONS — rouge, centré sur le point, décalé -12px si both
+      if (showLivr) {
+        const livrLat = bothShown ? lat + 0.08 : lat;   // léger offset lat (pas lng)
+        const mk = L.marker([livrLat, lng], {
+          icon: numLabel(livr, isDk ? '#ff6666' : '#cc0000', isDk),
+          zIndexOffset: 200,
+        }).bindPopup(popup, { maxWidth:300 });
+        mk.on('mouseover', e => e.target.openPopup());
+        mk.on('mouseout',  e => e.target.closePopup());
+        mk.addTo(leafMap);
+        leafLayers.push(mk);
+        allMapMarkers.push({ layer:mk, country:p?.pays||'', region, pid });
+      }
+
+      // ── ACCORDS — vert, centré sur le point, décalé +12px si both
+      if (showAcc) {
+        const accLat = bothShown ? lat - 0.08 : lat;
+        const mk2 = L.marker([accLat, lng], {
+          icon: numLabel(acc, isDk ? '#00e676' : '#007a3d', isDk),
+          zIndexOffset: 100,
+        }).bindPopup(popup, { maxWidth:300 });
+        mk2.on('mouseover', e => e.target.openPopup());
+        mk2.on('mouseout',  e => e.target.closePopup());
+        mk2.addTo(leafMap);
+        leafLayers.push(mk2);
+        allMapMarkers.push({ layer:mk2, country:p?.pays||'', region, pid });
+      }
+    });
+  });
+
+  // Zoom to data or country
+  if (bounds.length > 0) {
+    try { leafMap.fitBounds(bounds, { padding: [55, 55], maxZoom: 9 }); } catch(e) {}
+  } else if (proj) {
+    const zoom = proj.paysId===384?7:proj.paysId===250?6:5;
+    leafMap.setView([centerLat, centerLng], zoom);
+  } else {
+    leafMap.setView([20, 10], 2);
+  }
+
+  // Country filter dropdown
+  const cfsel = document.getElementById('mapCountryFilter');
+  if (cfsel) {
+    const countries = [...new Set(APP.projects.map(p => p.pays).filter(Boolean))].sort();
+    const cur = cfsel.value;
+    cfsel.innerHTML = '<option value="">\u{1F30D} Tous les pays</option>';
+    countries.forEach(c => { cfsel.innerHTML += '<option value="' + c + '"' + (cur===c?' selected':'') + '>' + c + '</option>'; });
+  }
+}
+
+function filterMapByCountry(country) {
+  const bounds = [];
+  allMapMarkers.forEach(function(m) {
+    const show = !country || m.country === country;
+    if (show) {
+      if (!leafMap.hasLayer(m.layer)) m.layer.addTo(leafMap);
+      try { const ll = m.layer.getLatLng(); if(ll) bounds.push([ll.lat, ll.lng]); } catch(e) {}
+    } else {
+      if (leafMap.hasLayer(m.layer)) leafMap.removeLayer(m.layer);
+    }
+  });
+  if (bounds.length > 0) {
+    try { leafMap.fitBounds(bounds, { padding: [50, 50], maxZoom: 9 }); } catch(e) {}
+  }
+}
+
+/* ─── CHARTS ─── */
+const charts={};
+function destroyCharts(){Object.values(charts).forEach(c=>{try{c.destroy();}catch(e){}});}
+const dark=()=>document.documentElement.getAttribute('data-theme')==='dark';
+const tc=()=>dark()?'rgba(139,165,204,.85)':'rgba(58,82,120,.85)';
+const gc=()=>dark()?'rgba(255,255,255,.05)':'rgba(0,0,0,.06)';
+
+const MONTHS=['','Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+
+function hbar(id,labels,data,color){
+  const canvas=document.getElementById(id);if(!canvas)return null;
+  const h=Math.max(120,labels.length*40+60);
+  canvas.parentElement.style.height=h+'px';
+  return new Chart(canvas,{
+    type:'bar',
+    data:{labels,datasets:[{data,backgroundColor:color+'33',borderColor:color,borderWidth:1.5,borderRadius:5,barThickness:16}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:v=>v.raw.toLocaleString('fr')}}},
+      scales:{
+        x:{ticks:{color:tc(),font:{size:10}},grid:{color:gc()},border:{display:false}},
+        y:{ticks:{color:tc(),font:{size:10}},grid:{display:false},border:{display:false}}
+      }}
+  });
+}
+
+function rebuildCharts(recs){
+  if(!recs) recs=filtered();
+  destroyCharts();
+
+  const topCA=byRegion(recs,'Contact_Argumente').slice(0,5);
+  const topLivr=byRegion(recs,'Occurence_Livraison').slice(0,5);
+  const topAcc=byRegion(recs,'Accords').slice(0,5);
+  const topProd=byRegion(recs,'Occurence_Prod').slice(0,5);
+  const topFC=byRegion(recs,'F_C').slice(0,5);
+
+  // Efficacité par région (livr/prod %)
+  const regions=[...new Set(recs.map(r=>r.Régions).filter(Boolean))];
+  const effMap=regions.map(r=>{
+    const rr=recs.filter(x=>x.Régions===r);
+    const prod=rr.reduce((s,x)=>s+(+x.Occurence_Prod||0),0);
+    const livr=rr.reduce((s,x)=>s+(+x.Occurence_Livraison||0),0);
+    return[r,prod>0?Math.round(livr/prod*100):0];
+  }).sort((a,b)=>a[1]-b[1]).slice(0,5);
+
+  charts.ca=hbar('ch-ca',topCA.map(x=>x[0]),topCA.map(x=>x[1]),'#ff4da6');
+  charts.flop=hbar('ch-flop',effMap.map(x=>x[0]),effMap.map(x=>x[1]),'#ffc107');
+  charts.livr=hbar('ch-livr',topLivr.map(x=>x[0]),topLivr.map(x=>x[1]),'#ff3d5a');
+
+  const ratMap=regions.map(r=>{
+    const rr=recs.filter(x=>x.Régions===r);
+    const livr=rr.reduce((s,x)=>s+(+x.Occurence_Livraison||0),0);
+    const acc=rr.reduce((s,x)=>s+(+x.Accords||0),0);
+    return[r,livr>0?Math.round(acc/livr*100):0];
+  }).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  charts.rat=hbar('ch-rat',ratMap.map(x=>x[0]),ratMap.map(x=>x[1]),'#1a6fff');
+  charts.acc=hbar('ch-acc',topAcc.map(x=>x[0]),topAcc.map(x=>x[1]),'#00e676');
+  charts.prod=hbar('ch-prod',topProd.map(x=>x[0]),topProd.map(x=>x[1]),'#00c8ff');
+
+  // Evolution mensuelle
+  const evolCanvas=document.getElementById('ch-evol');
+  if(evolCanvas){
+    const mois=[1,2,3,4,5,6,7,8,9,10,11,12];
+    const livrByM=mois.map(m=>recs.filter(r=>+r.Mois===m).reduce((s,r)=>s+(+r.Occurence_Livraison||0),0));
+    const accByM=mois.map(m=>recs.filter(r=>+r.Mois===m).reduce((s,r)=>s+(+r.Accords||0),0));
+    const prodByM=mois.map(m=>recs.filter(r=>+r.Mois===m).reduce((s,r)=>s+(+r.Occurence_Prod||0),0));
+    const caByM=mois.map(m=>recs.filter(r=>+r.Mois===m).reduce((s,r)=>s+(+r.Contact_Argumente||0),0));
+    const fcByM=mois.map(m=>recs.filter(r=>+r.Mois===m).reduce((s,r)=>s+(+r.F_C||0),0));
+    const hasData=livrByM.some(v=>v>0)||accByM.some(v=>v>0);
+    evolCanvas.parentElement.style.height='220px';
+    charts.evol=new Chart(evolCanvas,{
+      type:'line',
+      data:{
+        labels:MONTHS.slice(1),
+        datasets:[
+          {label:'Production',data:prodByM,borderColor:'#00c8ff',backgroundColor:'rgba(0,200,255,.06)',tension:.4,fill:true,pointRadius:3},
+          {label:'Livraisons',data:livrByM,borderColor:'#ff3d5a',backgroundColor:'rgba(255,61,90,.06)',tension:.4,fill:true,pointRadius:3},
+          {label:'Accords',data:accByM,borderColor:'#00e676',backgroundColor:'rgba(0,230,118,.06)',tension:.4,fill:true,pointRadius:3},
+          {label:'Cont. Arg.',data:caByM,borderColor:'#ffc107',backgroundColor:'rgba(255,193,7,.04)',tension:.4,fill:false,pointRadius:3},
+          {label:'Fiche Close',data:fcByM,borderColor:'#ff4da6',backgroundColor:'rgba(255,77,166,.04)',tension:.4,fill:false,pointRadius:3},
+        ]
+      },
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{labels:{color:tc(),font:{size:10},boxWidth:10,padding:12}}},
+        scales:{
+          x:{ticks:{color:tc(),font:{size:10}},grid:{color:gc()},border:{display:false}},
+          y:{ticks:{color:tc(),font:{size:10}},grid:{color:gc()},border:{display:false}}
+        }}
+    });
+  }
+}
+
+/* ─── SAISIE ─── */
+function autoFillDate(){
+  document.getElementById('f-date').value=new Date().toISOString().split('T')[0];
+  const now=new Date();
+  document.getElementById('f-mois').value=now.getMonth()+1;
+  document.getElementById('f-annee').value=now.getFullYear();
+  const start=new Date(now.getFullYear(),0,1);
+  document.getElementById('f-sem').value=Math.ceil(((now-start)/86400000+start.getDay()+1)/7);
+}
+
+function clearForm(){
+  ['f-date','f-region','f-prod','f-livr','f-acc','f-fc','f-ca','f-sem','f-mois','f-annee'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('f-statut').value='Livré';
+  const s=document.getElementById('f-projet');if(APP.activeProject&&s)s.value=APP.activeProject;
+}
+
+function saveRecord(){
+  const projId=document.getElementById('f-projet').value;
+  const date=document.getElementById('f-date').value;
+  const region=document.getElementById('f-region').value.trim();
+  if(!projId){showAlert('alert-saisie','Sélectionnez un projet.','e');return;}
+  if(!date){showAlert('alert-saisie','La date est requise.','e');return;}
+  if(!region){showAlert('alert-saisie','La région est requise.','e');return;}
+  const rec={
+    id:'rec_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),
+    Date_appel:date,
+    Régions:region,
+    Stats_StatusText:document.getElementById('f-statut').value,
+    Occurence_Prod:parseFloat(document.getElementById('f-prod').value)||0,
+    Occurence_Livraison:parseFloat(document.getElementById('f-livr').value)||0,
+    Année:parseInt(document.getElementById('f-annee').value)||new Date().getFullYear(),
+    Mois:parseInt(document.getElementById('f-mois').value)||new Date().getMonth()+1,
+    Semaine:parseInt(document.getElementById('f-sem').value)||1,
+    Contact_Argumente:parseFloat(document.getElementById('f-ca').value)||0,
+    F_C:parseFloat(document.getElementById('f-fc').value)||0,
+    Accords:parseFloat(document.getElementById('f-acc').value)||0,
+    Projet:projId,
+  };
+  APP.records.push(rec);
+  persist();
+  addTrace('Saisie enregistrée',`${region} — ${date}`);
+  showAlert('alert-saisie','Entrée enregistrée avec succès !','s');
+  renderTable();
+  renderDashboard();
+}
+
+function deleteRecord(id){
+  APP.records=APP.records.filter(r=>r.id!==id);
+  persist();
+  addTrace('Suppression entrée',id);
+  renderTable();
+  renderDashboard();
+}
+
+/* ─── TABLE ─── */
+function renderTable(){
+  const search=(document.getElementById('searchTbl')?.value||'').toLowerCase();
+  const tbody=document.getElementById('dataTable');
+  const empty=document.getElementById('emptyTable');
+  let recs=[...APP.records].reverse();
+  if(search) recs=recs.filter(r=>Object.values(r).join(' ').toLowerCase().includes(search));
+  if(!recs.length){tbody.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  const projMap=Object.fromEntries(APP.projects.map(p=>[p.id,p.name]));
+  tbody.innerHTML=recs.slice(0,200).map((r,i)=>`
+    <tr>
+      <td style="color:var(--tx3)">${i+1}</td>
+      <td>${r.Date_appel||''}</td>
+      <td><span class="badge" style="background:${APP.projects.find(p=>p.id===r.Projet)?.color||'var(--brd2)'}22;color:${APP.projects.find(p=>p.id===r.Projet)?.color||'var(--tx3)'}">${projMap[r.Projet]||r.Projet||'—'}</span></td>
+      <td>${r.Régions||''}</td>
+      <td><span class="badge" style="${statBadge(r.Stats_StatusText)}">${r.Stats_StatusText||''}</span></td>
+      <td style="color:var(--c)">${(r.Occurence_Prod||0).toLocaleString('fr')}</td>
+      <td style="color:var(--re)">${(r.Occurence_Livraison||0).toLocaleString('fr')}</td>
+      <td style="color:var(--gr)">${(r.Accords||0).toLocaleString('fr')}</td>
+      <td style="color:var(--ye)">${(r.Contact_Argumente||0).toLocaleString('fr')}</td>
+      <td style="color:var(--pk)">${(r.F_C||0).toLocaleString('fr')}</td>
+      <td>${r.Mois||''}</td>
+      <td>${r.Semaine||''}</td>
+      <td><button class="btn-danger" onclick="deleteRecord('${r.id}')">🗑</button></td>
+    </tr>`).join('');
+}
+
+function statBadge(s){
+  const m={Livré:'background:rgba(255,61,90,.1);color:var(--re)',Accord:'background:rgba(0,230,118,.1);color:var(--gr)',Refus:'background:rgba(100,100,100,.1);color:var(--tx3)',Promesse:'background:rgba(0,200,255,.1);color:var(--c)',Absent:'background:rgba(255,193,7,.1);color:var(--ye)',Rappel:'background:rgba(168,85,247,.1);color:var(--pu)'};
+  return m[s]||'background:var(--bg3);color:var(--tx3)';
+}
+
+/* ═══════════════════════════════════════════════════
+   IMPORT SYSTEM — STAGED (Preview → Validate → Commit)
+   ═══════════════════════════════════════════════════ */
+
+// Staging buffer
+let PENDING_IMPORT = null; // {rows:[], sessionLabel:'', filename:'', detected:[]}
+
+/* ── Normalise un header pour matching robuste (accents, casse, espaces, tirets) ── */
+function normHeader(h) {
+  return String(h||'').toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')  // strip accents
+    .replace(/[^a-z0-9]/g,'');                         // keep only alphanum
+}
+
+/* ── COL_MAP normalisé — détection insensible aux accents ── */
+const COL_FIELDS = {
+  Date_appel:          ['dateappel','date','datecall','calldate','datedebt'],
+  Régions:             ['rgions','regions','region','zone','secteur','localisation','rgion','dpartement','departement','ville','territoire'],
+  Stats_StatusText:    ['statsstatustext','statut','status','statustext','stat','etat','resultat','issue','outcome','disposition'],
+  Occurence_Prod:      ['occurenceprod','prod','production','occprod','nbappels','appels','calls','volume','contacts','tentatives'],
+  Occurence_Livraison: ['occurencelivraison','livraison','livr','livrais','occlivr','nblivr','delivered','joignabilite','joints','decroches'],
+  Année:               ['annee','year','an','yr','exercice'],
+  Mois:                ['mois','month','mo','mn','periode'],
+  Semaine:             ['semaine','sem','week','wk','s'],
+  Contact_Argumente:   ['contactargumente','contactargument','contarg','ca','contactarg','contactargu','argumente','argument','contactargt','conargument'],
+  F_C:                 ['fc','ficheclose','ficheclos','firstcall','firstcallresolution','fcr','resolution','closedfile','close'],
+  Accords:             ['accords','accord','agreements','deals','ventes','vente','sales','converted','conv'],
+  Projet:              ['projet','project','campagne','campaign','prog','programme','compte','account','client','source'],
+};
+
+function detectCols(headers) {
+  const normH = headers.map(normHeader);
+  const idx = {};
+  Object.entries(COL_FIELDS).forEach(([field, aliases]) => {
+    const fieldNorm = normHeader(field);
+    // 1. Exact normalized match with field name
+    let fi = normH.indexOf(fieldNorm);
+    // 2. Alias match
+    if (fi < 0) {
+      for (const a of aliases) {
+        fi = normH.findIndex(h => h === a || (a.length > 3 && (h.includes(a) || a.includes(h))));
+        if (fi >= 0) break;
+      }
+    }
+    if (fi >= 0) idx[field] = fi;
+  });
+  return idx;
+}
+
+function buildRecord(cells, idx, sessionId, rowNum) {
+  const get  = f => idx[f] !== undefined ? String(cells[idx[f]]||'').trim() : '';
+  const getN = f => idx[f] !== undefined ? (parseFloat(String(cells[idx[f]]||'').replace(/\s/g,'').replace(',','.')) || 0) : 0;
+  const getI = f => idx[f] !== undefined ? (parseInt(String(cells[idx[f]]||'')) || 0) : 0;
+
+  const region = get('Régions');
+  if (!region) return null; // skip rows without region
+
+  // Resolve project: column → form selection → active project → first project → 'IMPORT'
+  const projRaw = get('Projet');
+  let proj = '';
+  if (projRaw) {
+    // Try to match by name or id
+    const found = APP.projects.find(p =>
+      p.id === projRaw ||
+      p.name.toLowerCase() === projRaw.toLowerCase() ||
+      p.name.toLowerCase().includes(projRaw.toLowerCase()) ||
+      projRaw.toLowerCase().includes(p.name.toLowerCase())
+    );
+    proj = found ? found.id : projRaw; // keep raw if no match (project may be auto-created)
+  }
+  if (!proj) proj = document.getElementById('f-projet')?.value || '';
+  if (!proj) proj = APP.activeProject || '';
+  if (!proj && APP.projects.length) proj = APP.projects[0].id;
+  if (!proj) proj = 'IMPORT_' + sessionId;
+
+  // Parse date → extract Année/Mois if missing
+  const dateStr = get('Date_appel');
+  let annee = getI('Année') || new Date().getFullYear();
+  let mois   = getI('Mois')  || 0;
+  let sem    = getI('Semaine') || 0;
+  if (dateStr) {
+    const d = new Date(dateStr);
+    if (!isNaN(d)) {
+      if (!getI('Année'))   annee = d.getFullYear();
+      if (!getI('Mois'))    mois  = d.getMonth() + 1;
+      if (!getI('Semaine')) {
+        const start = new Date(d.getFullYear(), 0, 1);
+        sem = Math.ceil(((d - start) / 86400000 + start.getDay() + 1) / 7);
+      }
+    }
+  }
+
+  return {
+    id: 'rec_' + sessionId + '_' + rowNum + '_' + Math.random().toString(36).slice(2,5),
+    importSession: sessionId,
+    Date_appel:           dateStr,
+    Régions:              region,
+    Stats_StatusText:     get('Stats_StatusText') || 'Inconnu',
+    Occurence_Prod:       getN('Occurence_Prod'),
+    Occurence_Livraison:  getN('Occurence_Livraison'),
+    Année:                annee,
+    Mois:                 mois,
+    Semaine:              sem,
+    Contact_Argumente:    getN('Contact_Argumente'),
+    F_C:                  getN('F_C'),
+    Accords:              getN('Accords'),
+    Projet:               proj,
+  };
+}
+
+/* ── Parse brut (CSV ou Excel) → {headers, dataRows} ── */
+function parseCSVRaw(text) {
+  const lines = text.split(/\r?\n/).filter(l => l.trim());
+  if (!lines.length) return null;
+  const sep = lines[0].includes('\t') ? '\t' : lines[0].split(';').length > lines[0].split(',').length ? ';' : ',';
+  const unq = s => s.trim().replace(/^["']|["']$/g,'');
+  const headers  = lines[0].split(sep).map(unq);
+  const dataRows = lines.slice(1).map(l => l.split(sep).map(unq));
+  return {headers, dataRows};
+}
+
+function parseExcelRaw(buffer) {
+  const wb = XLSX.read(buffer, {type:'binary', cellDates:true, raw:false});
+  const results = [];
+  wb.SheetNames.forEach(shName => {
+    const data = XLSX.utils.sheet_to_json(wb.Sheets[shName], {header:1, defval:'', raw:false});
+    if (!data || data.length < 2) return;
+    let hdrIdx = 0;
+    for (let i=0; i<Math.min(8,data.length); i++) {
+      if (data[i] && data[i].some(c => c && String(c).trim())) { hdrIdx=i; break; }
+    }
+    const headers  = data[hdrIdx].map(h => String(h||'').trim());
+    const dataRows = data.slice(hdrIdx+1).map(row => row.map(c => c===null||c===undefined?'':String(c).trim()));
+    results.push({headers, dataRows});
+  });
+  return results; // array of sheets
+}
+
+/* ── STEP 1 : Charger et afficher l'aperçu ── */
+function handleDrop(e) {
+  const f = e.dataTransfer.files[0];
+  if (f) processFileForPreview(f);
+}
+
+function loadFilePreview(e) {
+  const f = e.target.files[0];
+  if (f) processFileForPreview(f);
+  e.target.value = '';
+}
+
+function processFileForPreview(file) {
+  const name = file.name.toLowerCase();
+  const sessionId = 'S' + Date.now();
+  const label = file.name + ' — ' + new Date().toLocaleString('fr');
+
+  if (name.endsWith('.xlsx') || name.endsWith('.xls')) {
+    if (typeof XLSX === 'undefined') {
+      showAlert('alert-csv','❌ SheetJS non chargé. Vérifiez la connexion.','e'); return;
+    }
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const sheets = parseExcelRaw(ev.target.result);
+        if (!sheets.length) { showAlert('alert-csv','❌ Fichier Excel vide ou illisible.','e'); return; }
+        const {headers, dataRows} = sheets[0]; // primary sheet
+        buildPreview(headers, dataRows, sessionId, label);
+      } catch(err) { showAlert('alert-csv','❌ Erreur Excel: '+err.message,'e'); }
+    };
+    reader.readAsBinaryString(file);
+  } else {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const parsed = parseCSVRaw(ev.target.result);
+      if (!parsed) { showAlert('alert-csv','❌ Fichier vide.','e'); return; }
+      buildPreview(parsed.headers, parsed.dataRows, sessionId, label);
+    };
+    reader.readAsText(file, 'UTF-8');
+  }
+}
+
+function buildPreview(headers, dataRows, sessionId, label) {
+  const idx = detectCols(headers);
+  const detected = Object.keys(idx);
+
+  // Build pending rows (without committing)
+  const rows = [];
+  dataRows.forEach((cells, i) => {
+    if (!cells || cells.every(c => !c || String(c).trim()==='')) return;
+    const r = buildRecord(cells, idx, sessionId, i);
+    if (r) rows.push({rec:r, raw:cells});
+  });
+
+  PENDING_IMPORT = {rows, sessionId, label, detected, headers};
+
+  // Show preview section
+  document.getElementById('dropZoneWrap').style.display = 'none';
+  document.getElementById('importPreviewWrap').style.display = 'block';
+
+  // Info banner
+  const missingCols = Object.keys(COL_FIELDS).filter(f => !idx[f]);
+  document.getElementById('importPreviewInfo').innerHTML =
+    `<strong style="color:var(--c)">${file ? label : label}</strong><br>` +
+    `📊 <strong>${rows.length}</strong> lignes valides sur ${dataRows.length} — ` +
+    `<strong>${detected.length}</strong> colonnes détectées<br>` +
+    (missingCols.length ? `<span style="color:var(--ye)">⚠ Non détectées: ${missingCols.join(', ')}</span>` : '<span style="color:var(--gr)">✅ Toutes les colonnes reconnues</span>');
+
+  // Column mapping display
+  document.getElementById('importPreviewColMap').innerHTML =
+    '<strong>Mapping colonnes :</strong> ' +
+    detected.map(f => `<span style="color:var(--c)">${f}</span>→col[${idx[f]}]<em style="color:var(--tx3)">(${headers[idx[f]]})</em>`).join(' · ');
+
+  // Preview table (first 8 rows)
+  const previewRows = rows.slice(0,8);
+  const cols = ['Régions','Stats_StatusText','Occurence_Prod','Occurence_Livraison','Accords','Contact_Argumente','F_C','Année','Mois','Semaine'];
+  document.getElementById('importPreviewHead').innerHTML =
+    '<tr style="background:var(--bg2)">' + cols.map(c=>`<th style="padding:5px 8px;color:var(--tx3);white-space:nowrap;font-size:10px;text-transform:uppercase">${c}</th>`).join('') + '</tr>';
+  document.getElementById('importPreviewBody').innerHTML =
+    previewRows.map(({rec}) =>
+      '<tr>' + cols.map(c => `<td style="padding:4px 8px;border-bottom:1px solid var(--brd);white-space:nowrap;color:var(--tx2)">${rec[c]??''}</td>`).join('') + '</tr>'
+    ).join('') +
+    (rows.length > 8 ? `<tr><td colspan="${cols.length}" style="padding:6px 8px;color:var(--tx3);font-style:italic">... et ${rows.length-8} lignes supplémentaires</td></tr>` : '');
+
+  showAlert('alert-csv', `👁 Aperçu prêt — ${rows.length} lignes. Vérifiez puis cliquez "Valider".`, 'i');
+}
+
+/* ── STEP 2 : Valider (commit) ── */
+function validateImport() {
+  if (!PENDING_IMPORT || !PENDING_IMPORT.rows.length) {
+    showAlert('alert-csv2','Aucune donnée en attente.','e'); return;
+  }
+  const {rows, sessionId, label, detected} = PENDING_IMPORT;
+
+  // Auto-create project if some records have unknown proj
+  const unknownProjs = [...new Set(rows.map(x=>x.rec.Projet).filter(p=>p&&!APP.projects.find(pr=>pr.id===p)))];
+  unknownProjs.forEach(pid => {
+    if (!APP.projects.find(p=>p.id===pid)) {
+      APP.projects.push({id:pid,name:pid,pays:'N/A',paysId:0,paysLat:0,paysLng:0,color:'#00c8ff',desc:'Importé auto',objLivr:0,objRat:50});
+    }
+  });
+
+  // Commit records
+  const existIds = new Set(APP.records.map(r=>r.id));
+  let added = 0;
+  rows.forEach(({rec}) => {
+    if (!existIds.has(rec.id)) { APP.records.push(rec); added++; }
+  });
+
+  // Save session metadata
+  if (!APP.importSessions) APP.importSessions = [];
+  APP.importSessions.unshift({id:sessionId, label, count:added, ts:new Date().toISOString(), detected});
+
+  persist();
+  addTrace('Import validé', `${added} enregistrements — ${label}`);
+  PENDING_IMPORT = null;
+
+  // Reset UI
+  cancelImport();
+  showAlert('alert-csv', `✅ ${added} enregistrements importés avec succès !`, 's');
+  renderTable(); renderDashboard(); renderProjList(); renderImportSessions(); populateProjectSwitcher(); populateFormProjects();
+}
+
+function cancelImport() {
+  PENDING_IMPORT = null;
+  document.getElementById('importPreviewWrap').style.display = 'none';
+  document.getElementById('dropZoneWrap').style.display = 'block';
+  document.getElementById('importPreviewHead').innerHTML = '';
+  document.getElementById('importPreviewBody').innerHTML = '';
+}
+
+/* ── Actualiser ── */
+function refreshAll() {
+  renderDashboard();
+  renderTable();
+  renderProjList();
+  renderImportSessions();
+  showAlert('alert-csv','🔄 Données actualisées.','s');
+}
+
+/* ── Supprimer un import par session ── */
+function deleteImportSession(sessionId) {
+  const sess = (APP.importSessions||[]).find(s=>s.id===sessionId);
+  const count = (APP.records||[]).filter(r=>r.importSession===sessionId).length;
+  if (!confirm(`Supprimer l'import "${sess?.label||sessionId}" (${count} enregistrements) ?`)) return;
+  APP.records = APP.records.filter(r => r.importSession !== sessionId);
+  APP.importSessions = (APP.importSessions||[]).filter(s => s.id !== sessionId);
+  persist();
+  addTrace('Suppression import', sessionId);
+  renderDashboard(); renderTable(); renderProjList(); renderImportSessions();
+}
+
+function renderImportSessions() {
+  const list = document.getElementById('importSessionsList');
+  const empty = document.getElementById('importSessionsEmpty');
+  if (!list) return;
+  const sessions = APP.importSessions || [];
+  if (!sessions.length) { list.innerHTML=''; if(empty) empty.style.display='block'; return; }
+  if(empty) empty.style.display='none';
+  list.innerHTML = sessions.map(s => {
+    const count = (APP.records||[]).filter(r=>r.importSession===s.id).length;
+    const dt = s.ts ? new Date(s.ts).toLocaleString('fr') : '';
+    return `<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--bg2);border:1px solid var(--brd);border-radius:8px;margin-bottom:5px;font-size:11px">
+      <div style="flex:1;min-width:0">
+        <div style="color:var(--tx);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${s.label}">${s.label}</div>
+        <div style="color:var(--tx3)">${dt} · <strong style="color:var(--c)">${count}</strong> enreg.</div>
+      </div>
+      <button class="btn-danger" style="flex-shrink:0;font-size:10px;padding:3px 8px" onclick="deleteImportSession('${s.id}')">🗑 Supprimer</button>
+    </div>`;
+  }).join('');
+}
+
+function downloadTemplate(){
+  const hdr='Date_appel\tRégions\tStats_StatusText\tOccurence_Prod\tOccurence_Livraison\tAnnée\tMois\tSemaine\tContact_Argumente\tF_C\tAccords\tProjet';
+  const ex='2024-04-05\tAbidjan\tLivré\t150\t120\t2024\t4\t15\t85\t40\t45\t'+(APP.projects[0]?.id||'MON_PROJET')+'';
+  const blob=new Blob([hdr+'\n'+ex],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='template_exceliam.csv';a.click();
+}
+
+function exportCSV(){
+  const hdr='Date_appel,Régions,Stats_StatusText,Occurence_Prod,Occurence_Livraison,Année,Mois,Semaine,Contact_Argumente,F_C,Accords,Projet';
+  const rows=APP.records.map(r=>[r.Date_appel,r.Régions,r.Stats_StatusText,r.Occurence_Prod,r.Occurence_Livraison,r.Année,r.Mois,r.Semaine,r.Contact_Argumente,r.F_C,r.Accords,r.Projet].join(','));
+  const blob=new Blob([hdr+'\n'+rows.join('\n')],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='exceliam_data_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
+  addTrace('Export CSV',`${APP.records.length} enregistrements`);
+}
+
+function exportJSON(){
+  const blob=new Blob([JSON.stringify(APP,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='exceliam_backup_'+new Date().toISOString().slice(0,10)+'.json';a.click();
+  addTrace('Export JSON','Sauvegarde complète');
+}
+
+function importJSON(){document.getElementById('jsonInput').click();}
+function loadJSONBackup(e){
+  const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    try{
+      const data=JSON.parse(ev.target.result);
+      if(!confirm(`Importer ${data.records?.length||0} enregistrements et ${data.projects?.length||0} projets ? (les données actuelles seront fusionnées)`)) return;
+      // Merge
+      const existIds=new Set(APP.records.map(r=>r.id));
+      (data.records||[]).forEach(rec=>{if(!existIds.has(rec.id))APP.records.push(rec);});
+      const existProjIds=new Set(APP.projects.map(p=>p.id));
+      (data.projects||[]).forEach(p=>{if(!existProjIds.has(p.id))APP.projects.push(p);});
+      Object.assign(APP.regionCoords,data.regionCoords||{});
+      Object.assign(APP.objectives,data.objectives||{});
+      persist();
+      addTrace('Import JSON','Restauration sauvegarde');
+      renderDashboard();renderProjList();populateProjectSwitcher();
+      alert('✅ Import réussi !');
+    }catch(err){alert('❌ Fichier JSON invalide.');}
+  };
+  r.readAsText(f);
+  e.target.value='';
+}
+
+function clearAllData(){
+  if(!confirm('Effacer tous les enregistrements du projet actif ?')) return;
+  if(APP.activeProject) APP.records=APP.records.filter(r=>r.Projet!==APP.activeProject);
+  else APP.records=[];
+  persist();addTrace('Effacement données','Projet actif');
+  renderTable();renderDashboard();renderProjList();
+}
+
+function clearAllDataGlobal(){
+  if(!confirm('⚠️ ATTENTION : effacer TOUTES les données (projets + enregistrements) ?')) return;
+  if(!confirm('Êtes-vous vraiment sûr ? Cette action est irréversible.')) return;
+  APP.projects=[];APP.records=[];APP.regionCoords={};APP.objectives={};APP.activeProject=null;
+  persist();
+  location.reload();
+}
+
+/* ─── PARAMS ─── */
+function showParamTab(id,el){
+  ['carte','objectifs','trace','data'].forEach(t=>{const el=document.getElementById('ptab-'+t);if(el)el.hidden=t!==id;});
+  document.querySelectorAll('.pnav-item').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  if(id==='trace') renderTrace();
+  if(id==='data') renderStats();
+}
+
+function renderParamsSelects(){
+  ['rcProjSel','objProjSel'].forEach(id=>{
+    const s=document.getElementById(id);if(!s)return;
+    s.innerHTML='<option value="">Sélectionner un projet...</option>';
+    APP.projects.forEach(p=>s.innerHTML+=`<option value="${p.id}" ${APP.activeProject===p.id?'selected':''}>${p.name}</option>`);
+  });
+  if(APP.activeProject){
+    document.getElementById('rcProjSel').value=APP.activeProject;
+    document.getElementById('objProjSel').value=APP.activeProject;
+    renderRegionCoords();
+    renderObjectifs();
+  }
+}
+
+function renderRegionCoords(){
+  const projId=document.getElementById('rcProjSel').value;
+  const wrap=document.getElementById('rcTableWrap');
+  const saveWrap=document.getElementById('rcSaveWrap');
+  if(!projId){wrap.innerHTML='<div class="empty"><div class="ico">🗺</div><p>Sélectionnez un projet.</p></div>';saveWrap.hidden=true;return;}
+  saveWrap.hidden=false;
+
+  // Get all regions from records
+  const regions=[...new Set(APP.records.filter(r=>r.Projet===projId).map(r=>r.Régions).filter(Boolean))].sort();
+  const coords=APP.regionCoords[projId]||{};
+
+  if(!regions.length){
+    wrap.innerHTML='<div class="alert alert-i show">Aucune région trouvée dans les données de ce projet. Commencez à saisir des données pour voir les régions ici.</div>';
+    return;
+  }
+
+  wrap.innerHTML=`<table class="rc-table">
+    <thead><tr><th>Région</th><th>Latitude</th><th>Longitude</th><th>Aperçu</th></tr></thead>
+    <tbody>${regions.map(r=>{
+      const [lat,lng]=coords[r]||['',''];
+      return `<tr>
+        <td style="color:var(--tx)">${r}</td>
+        <td><input class="rc-input" type="number" id="rc-lat-${r.replace(/[^a-z0-9]/gi,'_')}" value="${lat}" placeholder="ex: 5.36" step="0.01"/></td>
+        <td><input class="rc-input" type="number" id="rc-lng-${r.replace(/[^a-z0-9]/gi,'_')}" value="${lng}" placeholder="ex: -4.00" step="0.01"/></td>
+        <td style="font-size:10px;color:var(--tx3)">${lat&&lng?`📍 ${lat}, ${lng}`:'Non défini'}</td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table>`;
+}
+
+function saveRegionCoords(){
+  const projId=document.getElementById('rcProjSel').value;if(!projId)return;
+  const regions=[...new Set(APP.records.filter(r=>r.Projet===projId).map(r=>r.Régions).filter(Boolean))];
+  const coords={};
+  regions.forEach(r=>{
+    const key=r.replace(/[^a-z0-9]/gi,'_');
+    const latEl=document.getElementById('rc-lat-'+key);
+    const lngEl=document.getElementById('rc-lng-'+key);
+    if(latEl&&lngEl&&latEl.value!==''&&lngEl.value!==''){
+      coords[r]=[parseFloat(latEl.value),parseFloat(lngEl.value)];
+    }
+  });
+  APP.regionCoords[projId]=coords;
+  persist();
+  addTrace('Coordonnées régions sauvegardées',`Projet: ${APP.projects.find(p=>p.id===projId)?.name}`);
+  showAlert('alert-saisie','Coordonnées sauvegardées !','s');
+  renderMap();
+  renderRegionCoords();
+}
+
+function renderObjectifs(){
+  const projId=document.getElementById('objProjSel').value;
+  const form=document.getElementById('objForm');
+  if(!projId){form.hidden=true;return;}
+  form.hidden=false;
+  const obj=APP.objectives[projId]||{};
+  document.getElementById('obj-prod').value=obj.prod||'';
+  document.getElementById('obj-livr').value=obj.livr||'';
+  document.getElementById('obj-acc').value=obj.acc||'';
+  document.getElementById('obj-rat').value=obj.rat||'';
+  document.getElementById('obj-ca').value=obj.ca||'';
+  document.getElementById('obj-seuil').value=obj.seuil||70;
+}
+
+function saveObjectifs(){
+  const projId=document.getElementById('objProjSel').value;if(!projId)return;
+  APP.objectives[projId]={
+    prod:parseInt(document.getElementById('obj-prod').value)||0,
+    livr:parseInt(document.getElementById('obj-livr').value)||0,
+    acc:parseInt(document.getElementById('obj-acc').value)||0,
+    rat:parseInt(document.getElementById('obj-rat').value)||50,
+    ca:parseFloat(document.getElementById('obj-ca').value)||0,  // Contact Argumenté objectif
+    seuil:parseInt(document.getElementById('obj-seuil').value)||70,
+  };
+  persist();
+  addTrace('Objectifs KPI sauvegardés',`Projet: ${APP.projects.find(p=>p.id===projId)?.name}`);
+  alert('✅ Objectifs sauvegardés !');
+}
+
+function renderTrace(){
+  const tbody=document.getElementById('traceTable');
+  const empty=document.getElementById('emptyTrace');
+  if(!APP.trace.length){tbody.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  tbody.innerHTML=APP.trace.map(t=>`<tr><td style="color:var(--tx3);white-space:nowrap">${t.ts}</td><td style="color:var(--c)">${t.action}</td><td style="color:var(--tx2)">${t.detail||''}</td></tr>`).join('');
+}
+
+function clearTrace(){if(!confirm('Effacer le journal ?'))return;APP.trace=[];persist();renderTrace();}
+
+function renderStats(){
+  document.getElementById('statProj').textContent=APP.projects.length;
+  document.getElementById('statRec').textContent=APP.records.length.toLocaleString('fr');
+  try{const size=new Blob([JSON.stringify(APP)]).size;document.getElementById('statSize').textContent=(size/1024).toFixed(1)+' Ko';}catch(e){}
+  document.getElementById('statDate').textContent=new Date().toLocaleString('fr');
+}
+
+/* ─── UTILS ─── */
+function showAlert(id,msg,type){
+  const el=document.getElementById(id);if(!el)return;
+  el.className='alert alert-'+type+' show';
+  el.textContent=msg;
+  setTimeout(()=>el.classList.remove('show'),3500);
+}
+
+/* ─── INIT ─── */
+function init(){
+  hydrate();
+  document.documentElement.setAttribute('data-theme',APP.theme||'dark');
+  populateCountrySelect();
+  populateProjectSwitcher();
+  populateFormProjects();
+
+  // Default color selection
+  document.querySelector('.color-opt').style.borderColor='#fff';
+
+  // Init map — triggered by Leaflet onload callback
+
+  // Render
+  renderDashboard();
+  renderImportSessions();
+
+  // Demo data if empty
+  if(!APP.projects.length && !APP.records.length){
+    setTimeout(()=>{
+      document.getElementById('panel-dashboard').classList.remove('active');
+      document.querySelectorAll('.ntab').forEach(t=>t.classList.remove('active'));
+      document.getElementById('panel-projets').classList.add('active');
+      document.querySelectorAll('.ntab')[2].classList.add('active');
+    },500);
+  }
+}
+
+document.addEventListener('DOMContentLoaded',init);
+</script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" onload="onLeafletLoaded()" onerror="onLeafletError()"></script>
+</body>
+</html>
